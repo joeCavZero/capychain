@@ -26,6 +26,12 @@ func SetupNodeHandlers(r *mux.Router) {
 		"/peers",
 		peersPostHandler,
 	).Methods("POST")
+
+	// Endpoint para sincronizar peers
+	r.HandleFunc(
+		"/peers/sync",
+		peersSyncHandler,
+	)
 }
 
 func nodeHandler(w http.ResponseWriter, r *http.Request) {
@@ -92,6 +98,30 @@ func peersPostHandler(w http.ResponseWriter, r *http.Request) {
 	jsonedResp, _ := json.Marshal(
 		map[string]string{
 			"message": "Peer added successfully",
+		},
+	)
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsonedResp)
+}
+
+func peersSyncHandler(w http.ResponseWriter, r *http.Request) {
+	err := CapyBlockchainInstance.Node.SynchronizePeers()
+	if err != nil {
+		jsonedErr, _ := json.Marshal(
+			map[string]string{
+				"error": "Failed to synchronize peers",
+			},
+		)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonedErr)
+		return
+	}
+
+	jsonedResp, _ := json.Marshal(
+		map[string]string{
+			"message": "Peers synchronized successfully",
 		},
 	)
 	w.Header().Set("Content-Type", "application/json")

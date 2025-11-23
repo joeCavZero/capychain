@@ -184,8 +184,13 @@ func (cb *CapyBlockchain) MineCapyBlock(data string, resChan chan CapyBlock) {
 		dbg.Errorf("Error getting latest block: %s", err.Error())
 		return
 	}
+	highestBlock, err := cb.GetHighestBlock()
+	if err != nil {
+		dbg.Errorf("Error getting highest block: %s", err.Error())
+		return
+	}
 	newBlock := NewCapyBlock(
-		lastBlock.Height+1,
+		highestBlock.Height+1,
 		lastBlock.Hash,
 		time.Now().Unix(),
 		0,
@@ -371,4 +376,32 @@ func (cb *CapyBlockchain) GetCapyBlocksWithMinHeight(minHeight int64) ([]CapyBlo
 		capyBlocks[i] = *NewCapyBlockFromDbBlock(dbBlock)
 	}
 	return capyBlocks, nil
+}
+
+func (cb *CapyBlockchain) GetHighestBlock() (*CapyBlock, error) {
+	var err error
+	dt := cb.Database.NewQueries()
+	ctx := context.Background()
+	dbBlock, err := dt.GetHighestBlock(ctx)
+	if err != nil {
+		return nil, err
+	}
+	capyBlock := NewCapyBlockFromDbBlock(dbBlock)
+	return capyBlock, nil
+}
+
+func (cb *CapyBlockchain) Synchronize() error {
+	var err error
+
+	err = cb.SynchronizeBlockchain()
+	if err != nil {
+		return err
+	}
+
+	err = cb.Node.SynchronizePeers()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

@@ -55,6 +55,11 @@ func SetupBlockchainHandlers(r *mux.Router) {
 		"/block",
 		deleteBlockHandler,
 	).Methods("DELETE")
+
+	r.HandleFunc(
+		"/sync",
+		syncHandler,
+	)
 }
 
 func chainGetHandler(w http.ResponseWriter, r *http.Request) {
@@ -392,6 +397,31 @@ func chainLengthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResp)
+}
+
+func syncHandler(w http.ResponseWriter, r *http.Request) {
+	err := CapyBlockchainInstance.Synchronize()
+	if err != nil {
+		jsonedErr, _ := json.Marshal(
+			map[string]string{
+				"error": "Failed to synchronize with peers",
+			},
+		)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonedErr)
+		dbg.Errorf("Error synchronizing with peers: %s", err.Error())
+		return
+	}
+
+	jsonResp, _ := json.Marshal(
+		map[string]string{
+			"message": "Synchronized with peers successfully",
+		},
+	)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResp)

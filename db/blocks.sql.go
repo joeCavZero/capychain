@@ -194,6 +194,25 @@ func (q *Queries) GetBlocksWithMinHeight(ctx context.Context, height int64) ([]B
 	return items, nil
 }
 
+const getHighestBlock = `-- name: GetHighestBlock :one
+SELECT height, hash, previous_hash, timestamp, nonce, difficulty, data FROM blocks ORDER BY height DESC LIMIT 1
+`
+
+func (q *Queries) GetHighestBlock(ctx context.Context) (Block, error) {
+	row := q.db.QueryRowContext(ctx, getHighestBlock)
+	var i Block
+	err := row.Scan(
+		&i.Height,
+		&i.Hash,
+		&i.PreviousHash,
+		&i.Timestamp,
+		&i.Nonce,
+		&i.Difficulty,
+		&i.Data,
+	)
+	return i, err
+}
+
 const insertBlock = `-- name: InsertBlock :exec
 INSERT INTO blocks (
     height, 

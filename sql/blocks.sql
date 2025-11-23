@@ -40,3 +40,6 @@ DELETE FROM blocks WHERE height = ? AND hash = ?;
 
 -- name: GetBlocksWithMinHeight :many
 SELECT * FROM blocks WHERE height >= ? ORDER BY height ASC;
+
+-- name: GetHighestBlock :one
+SELECT * FROM blocks ORDER BY height DESC LIMIT 1;

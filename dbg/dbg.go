@@ -45,6 +45,7 @@ func Infof(format string, args ...any) {
 		getInfoTag(),
 		fmt.Sprintf(format, args...),
 	)
+	os.Stdout.Sync()
 }
 
 func Errorf(format string, args ...any) {
@@ -54,6 +55,7 @@ func Errorf(format string, args ...any) {
 		getErrorTag(),
 		fmt.Sprintf(format, args...),
 	)
+	os.Stdout.Sync()
 }
 
 func ExitWithErrorf(format string, args ...any) {
@@ -63,5 +65,6 @@ func ExitWithErrorf(format string, args ...any) {
 		getErrorTag(),
 		fmt.Sprintf(format, args...),
 	)
+	os.Stdout.Sync()
 	os.Exit(1)
 }

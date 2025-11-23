@@ -2,6 +2,7 @@ package blockchain
 
 import (
 	"capychain/dbg"
+	"encoding/json"
 	"fmt"
 	"net"
 	"net/http"
@@ -101,6 +102,33 @@ func NewCapyPeer(address string, port string) CapyPeer {
 	}
 }
 
+func (cp *CapyPeer) FetchPeers() ([]CapyPeer, error) {
+	var err error
+
+	var resp *http.Response
+	resp, err = http.Get(
+		fmt.Sprintf("http://%s:%s/peers", cp.Address, cp.Port),
+	)
+	if err != nil {
+		resp.Body.Close()
+		return nil, fmt.Errorf("error fetching peers from peer [%s:%s]: %s", cp.Address, cp.Port, err.Error())
+	}
+	if resp.StatusCode != http.StatusOK {
+		resp.Body.Close()
+		return nil, fmt.Errorf("non-OK HTTP status from peer [%s:%s]: %s", cp.Address, cp.Port, resp.Status)
+	}
+
+	var peerPeers []CapyPeer
+	err = json.NewDecoder(resp.Body).Decode(&peerPeers)
+	if err != nil {
+		resp.Body.Close()
+		return nil, fmt.Errorf("error decoding peers from peer [%s:%s]: %s", cp.Address, cp.Port, err.Error())
+	}
+	resp.Body.Close()
+
+	return peerPeers, nil
+}
+
 type CapyNodeResponse struct {
 	UID     uint64 `json:"uid"`
 	Name    string `json:"name"`
@@ -124,4 +152,20 @@ func (node *CapyNode) ToCapyNodeResponse() *CapyNodeResponse {
 		node.Address,
 		node.Port,
 	)
+}
+
+func (cn *CapyNode) SynchronizePeers() error {
+	var err error
+	for _, peer := range cn.Peers {
+		dbg.Infof("Synchronizing with peer %s:%s", peer.Address, peer.Port)
+		var peerPeers []CapyPeer
+		peerPeers, err = peer.FetchPeers()
+		if err != nil {
+			return fmt.Errorf("error synchronizing peers from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
+		}
+		for _, p := range peerPeers {
+			cn.AddCapyPeer(p)
+		}
+	}
+	return nil
 }
