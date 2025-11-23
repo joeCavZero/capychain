@@ -16,6 +16,18 @@ func SetupBlockchainHandlers(r *mux.Router) {
 		chainHandler,
 	).Methods("GET")
 
+	// Endpoint para saber o tamanho da blockchain
+	r.HandleFunc(
+		"/chain/length",
+		chainLengthHandler,
+	).Methods("GET")
+
+	// Endpoint para sincronizar a blockchain com outros nós
+	r.HandleFunc(
+		"/chain/sync",
+		chainSyncHandler,
+	)
+
 	// Endpoint para iniciar o processo de mineração
 	r.HandleFunc(
 		"/mine",
@@ -129,9 +141,9 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 
 	dbg.Infof("Starting blockchain validation process")
 
-	blocksLenght := CapyBlockchainInstance.Lenght()
+	blocksLength := CapyBlockchainInstance.Length()
 
-	if blocksLenght <= 0 {
+	if blocksLength <= 0 {
 		jsonResp, _ := json.Marshal(
 			map[string]string{
 				"message": "Blockchain is empty",
@@ -269,6 +281,59 @@ func deleteBlockHandler(w http.ResponseWriter, r *http.Request) {
 			"message": "Block deleted successfully",
 		},
 	)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResp)
+}
+
+func chainSyncHandler(w http.ResponseWriter, r *http.Request) {
+	err := CapyBlockchainInstance.SynchronizeBlockchain()
+	if err != nil {
+		jsonedErr, _ := json.Marshal(
+			map[string]string{
+				"error": "Failed to synchronize blockchain",
+			},
+		)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonedErr)
+		dbg.Errorf("Error synchronizing blockchain: %s", err.Error())
+		return
+	}
+
+	jsonResp, _ := json.Marshal(
+		map[string]string{
+			"message": "Blockchain synchronized successfully",
+		},
+	)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResp)
+}
+
+func chainLengthHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+
+	blocksLength := CapyBlockchainInstance.Length()
+
+	jsonResp, err := json.Marshal(
+		map[string]int64{
+			"length": blocksLength,
+		},
+	)
+	if err != nil {
+		jsonedErr, _ := json.Marshal(
+			map[string]string{
+				"error": "Failed to marshal blockchain length",
+			},
+		)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonedErr)
+		dbg.Errorf("Error marshaling blockchain length: %s", err.Error())
+		return
+	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResp)

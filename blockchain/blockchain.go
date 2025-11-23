@@ -5,7 +5,9 @@ import (
 	"capychain/dbg"
 	"context"
 	"crypto/sha256"
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -47,7 +49,7 @@ func Init(name string, port string, dbSource string) error {
 		return fmt.Errorf("failed to initialize blockchain: %s", err.Error())
 	}
 
-	if CapyBlockchainInstance.Lenght() == 0 {
+	if CapyBlockchainInstance.Length() == 0 {
 		dbg.Infof("Creating genesis block")
 		genesisBlock := NewGenesisCapyBlock("Genesis Block", CapyBlockchainInstance.Difficulty)
 		err = CapyBlockchainInstance.AddBlockToDatabase(genesisBlock)
@@ -56,8 +58,6 @@ func Init(name string, port string, dbSource string) error {
 		}
 		dbg.Infof("Genesis block created successfully")
 	}
-
-	go CapyBlockchainInstance.Node.StartDiscoveryListener()
 
 	err = CapyBlockchainInstance.Node.StartServer()
 	if err != nil {
@@ -207,7 +207,7 @@ func (cb *CapyBlockchain) MineCapyBlock(data string, resChan chan CapyBlock) {
 	}
 }
 
-func (cb *CapyBlockchain) Lenght() int64 {
+func (cb *CapyBlockchain) Length() int64 {
 	dt := cb.Database.NewQueries()
 	ctx := context.Background()
 	length, err := dt.GetBlocksLength(ctx)
@@ -267,4 +267,92 @@ func (cb *CapyBlockchain) GetAllCapyBlocks() ([]CapyBlock, error) {
 		capyBlocks[i] = *NewCapyBlockFromDbBlock(dbBlock)
 	}
 	return capyBlocks, nil
+}
+
+func (cb *CapyBlockchain) SynchronizeBlockchain() error {
+	for _, peer := range CapyBlockchainInstance.Node.Peers {
+		dbg.Infof("Synchronizing blockchain with peer [%s:%s]", peer.Address, peer.Port)
+
+		// Verificar o length da blockchain do peer
+		resp, err := http.Get(
+			fmt.Sprintf("http://%s:%s/chain/length", peer.Address, peer.Port),
+		)
+		if err != nil {
+			resp.Body.Close()
+			return fmt.Errorf("error fetching chain length from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			return fmt.Errorf("non-OK HTTP status from peer [%s:%s]: %s", peer.Address, peer.Port, resp.Status)
+		}
+
+		var peerChainLengthResp struct {
+			Length int64 `json:"length"`
+		}
+		err = json.NewDecoder(resp.Body).Decode(&peerChainLengthResp)
+		if err != nil {
+			resp.Body.Close()
+			return fmt.Errorf("error decoding chain length from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
+		}
+		resp.Body.Close()
+
+		localChainLength := CapyBlockchainInstance.Length()
+		if peerChainLengthResp.Length <= localChainLength {
+			dbg.Infof("Local blockchain is up-to-date with peer [%s:%s]", peer.Address, peer.Port)
+			continue
+		}
+
+		// Obter a blockchain completa do peer
+		var chainPostReqBody struct {
+			Height int64 `json:"height"`
+		}
+		chainPostReqBody.Height = localChainLength
+
+		jsonReqBody, err := json.Marshal(chainPostReqBody)
+		if err != nil {
+			return fmt.Errorf("error marshaling chain request body for peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
+		}
+
+		resp, err = http.Post(
+			fmt.Sprintf("http://%s:%s/chain", peer.Address, peer.Port),
+			"application/json",
+			strings.NewReader(string(jsonReqBody)),
+		)
+		if err != nil {
+			resp.Body.Close()
+			return fmt.Errorf("error fetching chain from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			resp.Body.Close()
+			return fmt.Errorf("non-OK HTTP status from peer [%s:%s]: %s", peer.Address, peer.Port, resp.Status)
+		}
+
+		var peerBlocks []CapyBlock
+		err = json.NewDecoder(resp.Body).Decode(&peerBlocks)
+		if err != nil {
+			resp.Body.Close()
+			return fmt.Errorf("error decoding chain from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
+		}
+
+		for _, capyBlock := range peerBlocks {
+			err = CapyBlockchainInstance.AddBlockToDatabase(&capyBlock)
+			if err != nil {
+				resp.Body.Close()
+				return fmt.Errorf("error adding block from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
+			}
+		}
+
+		invalidBlock, err := CapyBlockchainInstance.ValidateCapyBlocksBlockchain()
+		if err != nil {
+			resp.Body.Close()
+			return fmt.Errorf("blockchain from peer [%s:%s] is invalid at block height %d: %s", peer.Address, peer.Port, invalidBlock.Height, err.Error())
+		}
+
+		dbg.Infof("Successfully synchronized blockchain with peer [%s:%s]", peer.Address, peer.Port)
+		resp.Body.Close()
+	}
+
+	return nil
 }

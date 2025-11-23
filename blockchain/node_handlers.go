@@ -26,19 +26,13 @@ func SetupNodeHandlers(r *mux.Router) {
 		"/peers",
 		peersPostHandler,
 	).Methods("POST")
-
-	// Endpoint para escanear rede para peers
-	r.HandleFunc(
-		"/peers/scan",
-		peersScanHandler,
-	).Methods("GET")
 }
 
 func nodeHandler(w http.ResponseWriter, r *http.Request) {
 	/*
 		Write CapyNode information as JSON to response
 	*/
-	jsonedNode, err := json.Marshal(CapyBlockchainInstance.Node)
+	jsonedNode, err := json.Marshal(CapyBlockchainInstance.Node.ToCapyNodeResponse())
 	if err != nil {
 		jsonedErr, _ := json.Marshal(
 			map[string]string{
@@ -98,30 +92,6 @@ func peersPostHandler(w http.ResponseWriter, r *http.Request) {
 	jsonedResp, _ := json.Marshal(
 		map[string]string{
 			"message": "Peer added successfully",
-		},
-	)
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonedResp)
-}
-
-func peersScanHandler(w http.ResponseWriter, r *http.Request) {
-	err := CapyBlockchainInstance.Node.ScanNetworkForPeers()
-	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to scan network for peers",
-			},
-		)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
-		return
-	}
-
-	jsonedResp, _ := json.Marshal(
-		map[string]string{
-			"message": "Network scan completed successfully",
 		},
 	)
 	w.Header().Set("Content-Type", "application/json")
