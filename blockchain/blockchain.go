@@ -410,10 +410,5 @@ func (cb *CapyBlockchain) Synchronize(passedUIDs []uint64) error {
 		return err
 	}
 
-	err = cb.Node.SynchronizeUIDs(passedUIDs)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }

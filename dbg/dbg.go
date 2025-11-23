@@ -31,6 +31,13 @@ func getInfoTag() string {
 	return "[INFO]"
 }
 
+func getWarnTag() string {
+	if supportscolor.Stdout().SupportsColor {
+		return fmt.Sprintf("%s[%s]%s", "\033[33m", "WARN", reset)
+	}
+	return "[WARN]"
+}
+
 func getErrorTag() string {
 	if supportscolor.Stdout().SupportsColor {
 		return fmt.Sprintf("%s[%s]%s", red, "ERROR", reset)
@@ -43,6 +50,16 @@ func Infof(format string, args ...any) {
 		"%s %s %s\n",
 		getPrefixTag(),
 		getInfoTag(),
+		fmt.Sprintf(format, args...),
+	)
+	os.Stdout.Sync()
+}
+
+func Warnf(format string, args ...any) {
+	fmt.Printf(
+		"%s %s %s\n",
+		getPrefixTag(),
+		getWarnTag(),
 		fmt.Sprintf(format, args...),
 	)
 	os.Stdout.Sync()

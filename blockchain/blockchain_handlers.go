@@ -402,6 +402,7 @@ func chainLengthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResp)
 }
 
+/*
 func syncHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var jsonReq struct {
@@ -434,6 +435,39 @@ func syncHandler(w http.ResponseWriter, r *http.Request) {
 		dbg.Errorf("Error synchronizing with peers: %s", err.Error())
 		return
 	}
+
+	jsonResp, _ := json.Marshal(
+		map[string]string{
+			"message": "Synchronized with peers successfully",
+		},
+	)
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonResp)
+}
+*/
+
+func syncHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+
+	var jsonReq struct {
+		PassedUIDs []uint64 `json:"passed_uids"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&jsonReq)
+	if err != nil {
+		jsonedErr, _ := json.Marshal(
+			map[string]string{
+				"error": "Invalid request data",
+			},
+		)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonedErr)
+		dbg.Errorf("Error decoding request data: %s", err.Error())
+		return
+	}
+
+	//CapyBlockchainInstance.MulticastSynchronizing(jsonReq.PassedUIDs)
 
 	jsonResp, _ := json.Marshal(
 		map[string]string{

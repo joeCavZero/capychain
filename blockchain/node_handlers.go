@@ -27,11 +27,17 @@ func SetupNodeHandlers(r *mux.Router) {
 		peersPostHandler,
 	).Methods("POST")
 
+	// Endpoint para iniciar sincronização de peers
+	r.HandleFunc(
+		"/peers/sync",
+		peersSyncGetHandler,
+	).Methods("GET")
+
 	// Endpoint para sincronizar peers
 	r.HandleFunc(
 		"/peers/sync",
-		peersSyncHandler,
-	)
+		peersSyncPostHandler,
+	).Methods("POST")
 }
 
 func nodeHandler(w http.ResponseWriter, r *http.Request) {
@@ -105,23 +111,33 @@ func peersPostHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonedResp)
 }
 
-func peersSyncHandler(w http.ResponseWriter, r *http.Request) {
-	err := CapyBlockchainInstance.Node.SynchronizePeers()
+func peersSyncGetHandler(w http.ResponseWriter, r *http.Request) {
+	CapyBlockchainInstance.Node.SyncUIDs()
+	w.WriteHeader(http.StatusOK)
+}
+
+func peersSyncPostHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+
+	var passedAddressesUID map[string]uint64
+	err = json.NewDecoder(r.Body).Decode(&passedAddressesUID)
 	if err != nil {
 		jsonedErr, _ := json.Marshal(
 			map[string]string{
-				"error": "Failed to synchronize peers",
+				"error": "Failed to decode array of addresses",
 			},
 		)
-		w.WriteHeader(http.StatusInternalServerError)
+		w.WriteHeader(http.StatusBadRequest)
 		w.Header().Set("Content-Type", "application/json")
 		w.Write(jsonedErr)
 		return
 	}
 
+	CapyBlockchainInstance.Node.CastPeerSync(passedAddressesUID)
+
 	jsonedResp, _ := json.Marshal(
 		map[string]string{
-			"message": "Peers synchronized successfully",
+			"message": "Peer UIDs synchronized successfully",
 		},
 	)
 	w.Header().Set("Content-Type", "application/json")

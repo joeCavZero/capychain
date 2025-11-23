@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"bytes"
 	"capychain/dbg"
 	"encoding/json"
 	"fmt"
@@ -170,6 +171,61 @@ func (cn *CapyNode) SynchronizePeers() error {
 	return nil
 }
 
-func (cn *CapyNode) SynchronizeUIDs(passedUIDs []uint64) error {
-	return nil
+/*
+A função abaixo ajeita os UIDs dos nodes/peers da rede
+*/
+func (cn *CapyNode) SyncUIDs() {
+	var passedAddressesUID map[string]uint64 = make(map[string]uint64)
+	passedAddressesUID[cn.Address] = cn.UID
+
+	for _, peer := range cn.Peers {
+		peer.CastPeerSync(passedAddressesUID)
+	}
+}
+
+func GetNextUID(addrUid map[string]uint64) uint64 {
+	var maxUID uint64 = 0
+	for _, uid := range addrUid {
+		if uid > maxUID {
+			maxUID = uid
+		}
+	}
+	return maxUID + 1
+}
+
+func (cn *CapyNode) CastPeerSync(passedAddressesUID map[string]uint64) {
+	for addr, uid := range passedAddressesUID {
+		if addr == cn.Address {
+			return
+		}
+		if uid == cn.UID {
+			cn.UID = GetNextUID(passedAddressesUID)
+		}
+	}
+
+	passedAddressesUID[cn.Address] = cn.UID
+
+	for _, peer := range cn.Peers {
+		peer.CastPeerSync(passedAddressesUID)
+	}
+}
+
+func (cp *CapyPeer) CastPeerSync(passedAddressesUID map[string]uint64) {
+	var err error
+	jsonedPassedAddressesUID, err := json.Marshal(passedAddressesUID)
+	if err != nil {
+		return
+	}
+	dbg.Infof("Casting peer sync to %s:%s", cp.Address, cp.Port)
+	_, err = http.Post(
+		fmt.Sprintf(
+			"http://%s:%s/peers/sync",
+			cp.Address, cp.Port,
+		),
+		"application/json",
+		bytes.NewBuffer(jsonedPassedAddressesUID),
+	)
+	if err != nil {
+		return
+	}
 }
