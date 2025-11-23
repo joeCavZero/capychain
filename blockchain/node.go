@@ -169,3 +169,7 @@ func (cn *CapyNode) SynchronizePeers() error {
 	}
 	return nil
 }
+
+func (cn *CapyNode) SynchronizeUIDs(passedUIDs []uint64) error {
+	return nil
+}

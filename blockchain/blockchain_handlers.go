@@ -59,13 +59,13 @@ func SetupBlockchainHandlers(r *mux.Router) {
 	r.HandleFunc(
 		"/sync",
 		syncHandler,
-	)
+	).Methods("POST")
 }
 
 func chainGetHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	var allCapyBlocks []CapyBlock
+	var allCapyBlocks []*CapyBlock
 	allCapyBlocks, err = CapyBlockchainInstance.GetAllCapyBlocks()
 	if err != nil {
 		jsonedErr, _ := json.Marshal(
@@ -403,7 +403,25 @@ func chainLengthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func syncHandler(w http.ResponseWriter, r *http.Request) {
-	err := CapyBlockchainInstance.Synchronize()
+	var err error
+	var jsonReq struct {
+		PassedUIDs []uint64 `json:"passed_uids"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&jsonReq)
+	if err != nil {
+		jsonedErr, _ := json.Marshal(
+			map[string]string{
+				"error": "Invalid request data",
+			},
+		)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonedErr)
+		dbg.Errorf("Error decoding request data: %s", err.Error())
+		return
+	}
+
+	err = CapyBlockchainInstance.Synchronize(jsonReq.PassedUIDs)
 	if err != nil {
 		jsonedErr, _ := json.Marshal(
 			map[string]string{
