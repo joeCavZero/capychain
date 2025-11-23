@@ -30,8 +30,13 @@ func SetupBlockchainHandlers(r *mux.Router) {
 	// Endpoint para sincronizar a blockchain com outros nós
 	r.HandleFunc(
 		"/chain/sync",
-		chainSyncHandler,
+		chainSyncGetHandler,
 	).Methods("GET")
+
+	r.HandleFunc(
+		"/chain/sync",
+		chainSyncPostHandler,
+	).Methods("POST")
 
 	// Endpoint para iniciar o processo de mineração
 	r.HandleFunc(
@@ -55,11 +60,6 @@ func SetupBlockchainHandlers(r *mux.Router) {
 		"/block",
 		deleteBlockHandler,
 	).Methods("DELETE")
-
-	r.HandleFunc(
-		"/sync",
-		syncHandler,
-	).Methods("POST")
 }
 
 func chainGetHandler(w http.ResponseWriter, r *http.Request) {
@@ -349,7 +349,7 @@ func deleteBlockHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResp)
 }
 
-func chainSyncHandler(w http.ResponseWriter, r *http.Request) {
+func chainSyncGetHandler(w http.ResponseWriter, r *http.Request) {
 	err := CapyBlockchainInstance.SynchronizeBlockchain()
 	if err != nil {
 		jsonedErr, _ := json.Marshal(
@@ -402,13 +402,11 @@ func chainLengthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResp)
 }
 
-/*
-func syncHandler(w http.ResponseWriter, r *http.Request) {
+func chainSyncPostHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
-	var jsonReq struct {
-		PassedUIDs []uint64 `json:"passed_uids"`
-	}
-	err = json.NewDecoder(r.Body).Decode(&jsonReq)
+
+	var passedUIDs []uint64
+	err = json.NewDecoder(r.Body).Decode(&passedUIDs)
 	if err != nil {
 		jsonedErr, _ := json.Marshal(
 			map[string]string{
@@ -422,56 +420,10 @@ func syncHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = CapyBlockchainInstance.Synchronize(jsonReq.PassedUIDs)
-	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to synchronize with peers",
-			},
-		)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
-		dbg.Errorf("Error synchronizing with peers: %s", err.Error())
-		return
-	}
-
+	CapyBlockchainInstance.CastBlockchainSync(passedUIDs)
 	jsonResp, _ := json.Marshal(
 		map[string]string{
-			"message": "Synchronized with peers successfully",
-		},
-	)
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
-}
-*/
-
-func syncHandler(w http.ResponseWriter, r *http.Request) {
-	var err error
-
-	var jsonReq struct {
-		PassedUIDs []uint64 `json:"passed_uids"`
-	}
-	err = json.NewDecoder(r.Body).Decode(&jsonReq)
-	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Invalid request data",
-			},
-		)
-		w.WriteHeader(http.StatusBadRequest)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
-		dbg.Errorf("Error decoding request data: %s", err.Error())
-		return
-	}
-
-	//CapyBlockchainInstance.MulticastSynchronizing(jsonReq.PassedUIDs)
-
-	jsonResp, _ := json.Marshal(
-		map[string]string{
-			"message": "Synchronized with peers successfully",
+			"message": "Blockchain synchronization casted successfully",
 		},
 	)
 	w.WriteHeader(http.StatusOK)

@@ -29,14 +29,14 @@ func SetupNodeHandlers(r *mux.Router) {
 
 	// Endpoint para iniciar sincronização de peers
 	r.HandleFunc(
-		"/peers/sync",
-		peersSyncGetHandler,
+		"/node/sync",
+		nodeSyncGetHandler,
 	).Methods("GET")
 
 	// Endpoint para sincronizar peers
 	r.HandleFunc(
-		"/peers/sync",
-		peersSyncPostHandler,
+		"/node/sync",
+		nodeSyncPostHandler,
 	).Methods("POST")
 }
 
@@ -44,7 +44,7 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 	/*
 		Write CapyNode information as JSON to response
 	*/
-	jsonedNode, err := json.Marshal(CapyBlockchainInstance.Node.ToCapyNodeResponse())
+	jsonedNode, err := json.Marshal(CapyBlockchainInstance.Node)
 	if err != nil {
 		jsonedErr, _ := json.Marshal(
 			map[string]string{
@@ -111,16 +111,16 @@ func peersPostHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonedResp)
 }
 
-func peersSyncGetHandler(w http.ResponseWriter, r *http.Request) {
-	CapyBlockchainInstance.Node.SyncUIDs()
+func nodeSyncGetHandler(w http.ResponseWriter, r *http.Request) {
+	CapyBlockchainInstance.Node.SyncNodePeers()
 	w.WriteHeader(http.StatusOK)
 }
 
-func peersSyncPostHandler(w http.ResponseWriter, r *http.Request) {
+func nodeSyncPostHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	var passedAddressesUID map[string]uint64
-	err = json.NewDecoder(r.Body).Decode(&passedAddressesUID)
+	var passedCapyNodes []CapyNode
+	err = json.NewDecoder(r.Body).Decode(&passedCapyNodes)
 	if err != nil {
 		jsonedErr, _ := json.Marshal(
 			map[string]string{
@@ -133,7 +133,7 @@ func peersSyncPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	CapyBlockchainInstance.Node.CastPeerSync(passedAddressesUID)
+	CapyBlockchainInstance.Node.CastNodePeersSync(passedCapyNodes)
 
 	jsonedResp, _ := json.Marshal(
 		map[string]string{

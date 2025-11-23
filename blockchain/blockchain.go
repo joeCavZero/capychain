@@ -412,3 +412,7 @@ func (cb *CapyBlockchain) Synchronize(passedUIDs []uint64) error {
 
 	return nil
 }
+
+func (cb *CapyBlockchain) CastBlockchainSync(passedUIDs []uint64) {
+
+}

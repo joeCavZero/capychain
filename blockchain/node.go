@@ -21,7 +21,7 @@ type CapyNode struct {
 	Name    string      `json:"name"`
 	Address string      `json:"address"`
 	Port    string      `json:"port"`
-	Router  *mux.Router `json:"router"`
+	Router  *mux.Router `json:"-"`
 
 	Peers []CapyPeer `json:"peers"`
 }
@@ -130,31 +130,6 @@ func (cp *CapyPeer) FetchPeers() ([]CapyPeer, error) {
 	return peerPeers, nil
 }
 
-type CapyNodeResponse struct {
-	UID     uint64 `json:"uid"`
-	Name    string `json:"name"`
-	Address string `json:"address"`
-	Port    string `json:"port"`
-}
-
-func NewCapyNodeResponse(uid uint64, name string, address string, port string) *CapyNodeResponse {
-	return &CapyNodeResponse{
-		UID:     uid,
-		Name:    name,
-		Address: address,
-		Port:    port,
-	}
-}
-
-func (node *CapyNode) ToCapyNodeResponse() *CapyNodeResponse {
-	return NewCapyNodeResponse(
-		node.UID,
-		node.Name,
-		node.Address,
-		node.Port,
-	)
-}
-
 func (cn *CapyNode) SynchronizePeers() error {
 	var err error
 	for _, peer := range cn.Peers {
@@ -174,56 +149,62 @@ func (cn *CapyNode) SynchronizePeers() error {
 /*
 A função abaixo ajeita os UIDs dos nodes/peers da rede
 */
-func (cn *CapyNode) SyncUIDs() {
-	var passedAddressesUID map[string]uint64 = make(map[string]uint64)
-	passedAddressesUID[cn.Address] = cn.UID
+func (cn *CapyNode) SyncNodePeers() {
+	var passedCapyNodes []CapyNode = []CapyNode{
+		*cn,
+	}
 
 	for _, peer := range cn.Peers {
-		peer.CastPeerSync(passedAddressesUID)
+		peer.CastNodePeersSync(passedCapyNodes)
 	}
 }
 
-func GetNextUID(addrUid map[string]uint64) uint64 {
+func GetNextUID(capyNodes []CapyNode) uint64 {
 	var maxUID uint64 = 0
-	for _, uid := range addrUid {
-		if uid > maxUID {
-			maxUID = uid
+	for _, cpyNd := range capyNodes {
+		if cpyNd.UID > maxUID {
+			maxUID = cpyNd.UID
 		}
 	}
 	return maxUID + 1
 }
 
-func (cn *CapyNode) CastPeerSync(passedAddressesUID map[string]uint64) {
-	for addr, uid := range passedAddressesUID {
-		if addr == cn.Address {
+func (cn *CapyNode) CastNodePeersSync(passedCapyNodes []CapyNode) {
+	for _, cpyNd := range passedCapyNodes {
+		if cpyNd.Address == cn.Address && cpyNd.Port == cn.Port {
 			return
 		}
-		if uid == cn.UID {
-			cn.UID = GetNextUID(passedAddressesUID)
+
+		if cpyNd.UID == cn.UID {
+			cn.UID = GetNextUID(passedCapyNodes)
 		}
+
+		newCapyPeer := NewCapyPeer(cpyNd.Address, cpyNd.Port)
+		cn.AddCapyPeer(newCapyPeer)
+
 	}
 
-	passedAddressesUID[cn.Address] = cn.UID
+	passedCapyNodes = append(passedCapyNodes, *cn)
 
 	for _, peer := range cn.Peers {
-		peer.CastPeerSync(passedAddressesUID)
+		peer.CastNodePeersSync(passedCapyNodes)
 	}
 }
 
-func (cp *CapyPeer) CastPeerSync(passedAddressesUID map[string]uint64) {
+func (cp *CapyPeer) CastNodePeersSync(passedCapyNodes []CapyNode) {
 	var err error
-	jsonedPassedAddressesUID, err := json.Marshal(passedAddressesUID)
+	jsonedPassedCapyNodes, err := json.Marshal(passedCapyNodes)
 	if err != nil {
 		return
 	}
 	dbg.Infof("Casting peer sync to %s:%s", cp.Address, cp.Port)
 	_, err = http.Post(
 		fmt.Sprintf(
-			"http://%s:%s/peers/sync",
+			"http://%s:%s/node/sync",
 			cp.Address, cp.Port,
 		),
 		"application/json",
-		bytes.NewBuffer(jsonedPassedAddressesUID),
+		bytes.NewBuffer(jsonedPassedCapyNodes),
 	)
 	if err != nil {
 		return
