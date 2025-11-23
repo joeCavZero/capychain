@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 )
@@ -161,40 +162,19 @@ func (cb *CapyBlockchain) ValidateCapyBlocksBlockchain() (*CapyBlock, error) {
 	return nil, nil
 }
 
-func (cb *CapyBlockchain) GetLatestBlock() (*CapyBlock, error) {
-	dt := cb.Database.NewQueries()
-	ctx := context.Background()
-	dbBlocks, err := dt.GetAllBlocks(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(dbBlocks) == 0 {
-		return nil, fmt.Errorf("no blocks found in the database")
-	}
-
-	latestDbBlock := dbBlocks[len(dbBlocks)-1]
-	latestCapyBlock := NewCapyBlockFromDbBlock(latestDbBlock)
-	return latestCapyBlock, nil
-}
-
 func (cb *CapyBlockchain) MineCapyBlock(data string, resChan chan CapyBlock) {
-	lastBlock, err := cb.GetLatestBlock()
-	if err != nil {
-		dbg.Errorf("Error getting latest block: %s", err.Error())
-		return
-	}
 	highestBlock, err := cb.GetHighestBlock()
 	if err != nil {
 		dbg.Errorf("Error getting highest block: %s", err.Error())
 		return
 	}
+
 	newBlock := NewCapyBlock(
 		highestBlock.Height+1,
-		lastBlock.Hash,
+		highestBlock.Hash,
 		time.Now().Unix(),
 		0,
-		lastBlock.Difficulty,
+		highestBlock.Difficulty,
 		data,
 	)
 
@@ -275,88 +255,129 @@ func (cb *CapyBlockchain) GetAllCapyBlocks() ([]CapyBlock, error) {
 }
 
 func (cb *CapyBlockchain) SynchronizeBlockchain() error {
-	for _, peer := range CapyBlockchainInstance.Node.Peers {
+	for _, peer := range cb.Node.Peers {
 		dbg.Infof("Synchronizing blockchain with peer [%s:%s]", peer.Address, peer.Port)
 
-		// Verificar o length da blockchain do peer
-		resp, err := http.Get(
-			fmt.Sprintf("http://%s:%s/chain/length", peer.Address, peer.Port),
-		)
+		// --- GET chain length do peer
+		resp, err := http.Get(fmt.Sprintf("http://%s:%s/chain/length", peer.Address, peer.Port))
 		if err != nil {
-			resp.Body.Close()
+			// resp pode ser nil aqui, não feche
 			return fmt.Errorf("error fetching chain length from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
+		}
+		if resp != nil {
+			defer resp.Body.Close()
 		}
 
 		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
 			return fmt.Errorf("non-OK HTTP status from peer [%s:%s]: %s", peer.Address, peer.Port, resp.Status)
 		}
 
 		var peerChainLengthResp struct {
 			Length int64 `json:"length"`
 		}
-		err = json.NewDecoder(resp.Body).Decode(&peerChainLengthResp)
-		if err != nil {
-			resp.Body.Close()
+		if err := json.NewDecoder(resp.Body).Decode(&peerChainLengthResp); err != nil {
 			return fmt.Errorf("error decoding chain length from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
 		}
-		resp.Body.Close()
+		// resp.Body já será fechado pelo defer
 
-		localChainLength := CapyBlockchainInstance.Length()
+		localChainLength := cb.Length()
 		if peerChainLengthResp.Length <= localChainLength {
 			dbg.Infof("Local blockchain is up-to-date with peer [%s:%s]", peer.Address, peer.Port)
 			continue
 		}
 
-		// Obter a blockchain completa do peer
+		// --- Solicitar blocos a partir de localChainLength + 1
 		var chainPostReqBody struct {
 			Height int64 `json:"height"`
 		}
-		chainPostReqBody.Height = localChainLength
+		chainPostReqBody.Height = localChainLength + 1
 
 		jsonReqBody, err := json.Marshal(chainPostReqBody)
 		if err != nil {
 			return fmt.Errorf("error marshaling chain request body for peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
 		}
 
-		resp, err = http.Post(
+		resp2, err := http.Post(
 			fmt.Sprintf("http://%s:%s/chain", peer.Address, peer.Port),
 			"application/json",
 			strings.NewReader(string(jsonReqBody)),
 		)
 		if err != nil {
-			resp.Body.Close()
+			if resp2 != nil {
+				resp2.Body.Close()
+			}
 			return fmt.Errorf("error fetching chain from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
 		}
+		if resp2 != nil {
+			defer resp2.Body.Close()
+		}
 
-		if resp.StatusCode != http.StatusOK {
-			resp.Body.Close()
-			return fmt.Errorf("non-OK HTTP status from peer [%s:%s]: %s", peer.Address, peer.Port, resp.Status)
+		if resp2.StatusCode != http.StatusOK {
+			return fmt.Errorf("non-OK HTTP status from peer [%s:%s]: %s", peer.Address, peer.Port, resp2.Status)
 		}
 
 		var peerBlocks []CapyBlock
-		err = json.NewDecoder(resp.Body).Decode(&peerBlocks)
-		if err != nil {
-			resp.Body.Close()
+		if err := json.NewDecoder(resp2.Body).Decode(&peerBlocks); err != nil {
 			return fmt.Errorf("error decoding chain from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
 		}
 
-		for _, capyBlock := range peerBlocks {
-			err = CapyBlockchainInstance.AddBlockToDatabase(&capyBlock)
-			if err != nil {
-				resp.Body.Close()
+		// --- Ordenar peerBlocks por Height asc (precaução)
+		sort.Slice(peerBlocks, func(i, j int) bool {
+			return peerBlocks[i].Height < peerBlocks[j].Height
+		})
+
+		// --- Validar que o primeiro bloco recebido conecta ao nosso highest block
+		localHighest, err := cb.GetHighestBlock()
+		if err != nil {
+			return fmt.Errorf("error getting local highest block before sync with peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
+		}
+
+		// Se não houver blocos locais (apenas genesis ausente), trate conforme sua regra. Aqui assumimos que localHighest é sempre válido.
+		if len(peerBlocks) == 0 {
+			dbg.Infof("Peer [%s:%s] não retornou blocos a partir de height %d", peer.Address, peer.Port, chainPostReqBody.Height)
+			continue
+		}
+
+		firstPeerBlock := &peerBlocks[0]
+		// primeiro bloco deve apontar para o hash do bloco local highest (ou ser genesis válido)
+		if firstPeerBlock.PreviousHash != localHighest.Hash {
+			return fmt.Errorf("peer [%s:%s] chain does not connect to local chain: expected previous hash %s but got %s at peer block height %d",
+				peer.Address, peer.Port, localHighest.Hash, firstPeerBlock.PreviousHash, firstPeerBlock.Height)
+		}
+
+		// --- Validar a cadeia inteira (hashes e linking) antes de inserir
+		for i := 0; i < len(peerBlocks); i++ {
+			current := &peerBlocks[i]
+
+			// recompute hash check
+			if CalculateCapyBlockHash(current) != current.Hash {
+				return fmt.Errorf("invalid hash for peer block at height %d from peer [%s:%s]", current.Height, peer.Address, peer.Port)
+			}
+
+			// check previous hash linking
+			if i == 0 {
+				// já checado contra localHighest
+			} else {
+				prev := &peerBlocks[i-1]
+				if current.PreviousHash != prev.Hash {
+					return fmt.Errorf("peer chain has gap/bad link between heights %d and %d from peer [%s:%s]", prev.Height, current.Height, peer.Address, peer.Port)
+				}
+				if !ValidateBlock(current, prev) {
+					return fmt.Errorf("peer chain failed validation at height %d from peer [%s:%s]", current.Height, peer.Address, peer.Port)
+				}
+			}
+		}
+
+		// --- Inserir sequencialmente (apenas depois de validada)
+		for _, b := range peerBlocks {
+			if err := cb.AddBlockToDatabase(&b); err != nil {
+				// Se falhar por duplicata, você pode optar por ignorar; aqui retornamos o erro
 				return fmt.Errorf("error adding block from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
 			}
 		}
 
-		invalidBlock, err := CapyBlockchainInstance.ValidateCapyBlocksBlockchain()
-		if err != nil {
-			resp.Body.Close()
-			return fmt.Errorf("blockchain from peer [%s:%s] is invalid at block height %d: %s", peer.Address, peer.Port, invalidBlock.Height, err.Error())
-		}
-
 		dbg.Infof("Successfully synchronized blockchain with peer [%s:%s]", peer.Address, peer.Port)
-		resp.Body.Close()
+		// resp2.Body será fechado pelo defer
 	}
 
 	return nil
