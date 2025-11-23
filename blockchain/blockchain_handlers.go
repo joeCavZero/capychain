@@ -13,8 +13,13 @@ func SetupBlockchainHandlers(r *mux.Router) {
 	// Endpoint para obter a blockchain completa
 	r.HandleFunc(
 		"/chain",
-		chainHandler,
+		chainGetHandler,
 	).Methods("GET")
+	// ou a partir de uma altura mínima fornecida
+	r.HandleFunc(
+		"/chain",
+		chainPostHandler,
+	).Methods("POST")
 
 	// Endpoint para saber o tamanho da blockchain
 	r.HandleFunc(
@@ -26,7 +31,7 @@ func SetupBlockchainHandlers(r *mux.Router) {
 	r.HandleFunc(
 		"/chain/sync",
 		chainSyncHandler,
-	)
+	).Methods("GET")
 
 	// Endpoint para iniciar o processo de mineração
 	r.HandleFunc(
@@ -52,10 +57,63 @@ func SetupBlockchainHandlers(r *mux.Router) {
 	).Methods("DELETE")
 }
 
-func chainHandler(w http.ResponseWriter, r *http.Request) {
+func chainGetHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
+
 	var allCapyBlocks []CapyBlock
 	allCapyBlocks, err = CapyBlockchainInstance.GetAllCapyBlocks()
+	if err != nil {
+		jsonedErr, _ := json.Marshal(
+			map[string]string{
+				"error": "Failed to retrieve blockchain",
+			},
+		)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonedErr)
+		dbg.Errorf("Error retrieving blockchain: %s", err.Error())
+		return
+	}
+	jsonAllCapyBlocks, err := json.Marshal(allCapyBlocks)
+	if err != nil {
+		jsonedErr, _ := json.Marshal(
+			map[string]string{
+				"error": "Failed to marshal blockchain",
+			},
+		)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonedErr)
+		dbg.Errorf("Error marshaling blockchain: %s", err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
+	w.Write(jsonAllCapyBlocks)
+}
+
+func chainPostHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+
+	var requestData struct {
+		Height int64 `json:"height"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&requestData)
+	if err != nil {
+		jsonedErr, _ := json.Marshal(
+			map[string]string{
+				"error": "Invalid request data",
+			},
+		)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(jsonedErr)
+		dbg.Errorf("Error decoding request data: %s", err.Error())
+		return
+	}
+
+	var allCapyBlocks []CapyBlock
+	allCapyBlocks, err = CapyBlockchainInstance.GetCapyBlocksWithMinHeight(requestData.Height)
 	if err != nil {
 		jsonedErr, _ := json.Marshal(
 			map[string]string{

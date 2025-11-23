@@ -75,6 +75,41 @@ func (q *Queries) GetAllBlocks(ctx context.Context) ([]Block, error) {
 	return items, nil
 }
 
+const getAllBlocksOrderedByHeight = `-- name: GetAllBlocksOrderedByHeight :many
+SELECT height, hash, previous_hash, timestamp, nonce, difficulty, data FROM blocks ORDER BY height ASC
+`
+
+func (q *Queries) GetAllBlocksOrderedByHeight(ctx context.Context) ([]Block, error) {
+	rows, err := q.db.QueryContext(ctx, getAllBlocksOrderedByHeight)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Block
+	for rows.Next() {
+		var i Block
+		if err := rows.Scan(
+			&i.Height,
+			&i.Hash,
+			&i.PreviousHash,
+			&i.Timestamp,
+			&i.Nonce,
+			&i.Difficulty,
+			&i.Data,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getBlockByHash = `-- name: GetBlockByHash :one
 SELECT height, hash, previous_hash, timestamp, nonce, difficulty, data FROM blocks WHERE hash = ?
 `
@@ -124,12 +159,12 @@ func (q *Queries) GetBlocksLength(ctx context.Context) (int64, error) {
 	return length, err
 }
 
-const getBlocksOrderedByHeight = `-- name: GetBlocksOrderedByHeight :many
-SELECT height, hash, previous_hash, timestamp, nonce, difficulty, data FROM blocks ORDER BY height ASC
+const getBlocksWithMinHeight = `-- name: GetBlocksWithMinHeight :many
+SELECT height, hash, previous_hash, timestamp, nonce, difficulty, data FROM blocks WHERE height >= ? ORDER BY height ASC
 `
 
-func (q *Queries) GetBlocksOrderedByHeight(ctx context.Context) ([]Block, error) {
-	rows, err := q.db.QueryContext(ctx, getBlocksOrderedByHeight)
+func (q *Queries) GetBlocksWithMinHeight(ctx context.Context, height int64) ([]Block, error) {
+	rows, err := q.db.QueryContext(ctx, getBlocksWithMinHeight, height)
 	if err != nil {
 		return nil, err
 	}

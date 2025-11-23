@@ -101,7 +101,7 @@ func (cb *CapyBlockchain) ValidateCapyBlocksBlockchain() (*CapyBlock, error) {
 	ctx := context.Background()
 
 	var allBlockssOrderedByHeight []db.Block
-	allBlockssOrderedByHeight, err = dt.GetBlocksOrderedByHeight(ctx)
+	allBlockssOrderedByHeight, err = dt.GetAllBlocksOrderedByHeight(ctx)
 	if err != nil {
 		dbg.Errorf("Error retrieving blocks from database: %s", err.Error())
 		return nil, err
@@ -355,4 +355,20 @@ func (cb *CapyBlockchain) SynchronizeBlockchain() error {
 	}
 
 	return nil
+}
+
+func (cb *CapyBlockchain) GetCapyBlocksWithMinHeight(minHeight int64) ([]CapyBlock, error) {
+	var err error
+	dt := cb.Database.NewQueries()
+	ctx := context.Background()
+	dbBlocks, err := dt.GetBlocksWithMinHeight(ctx, minHeight)
+	if err != nil {
+		return nil, err
+	}
+
+	capyBlocks := make([]CapyBlock, len(dbBlocks))
+	for i, dbBlock := range dbBlocks {
+		capyBlocks[i] = *NewCapyBlockFromDbBlock(dbBlock)
+	}
+	return capyBlocks, nil
 }

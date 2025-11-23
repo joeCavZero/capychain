@@ -32,8 +32,11 @@ INSERT INTO blocks (
 -- name: GetBlocksLength :one
 SELECT COUNT(*) as length FROM blocks;
 
--- name: GetBlocksOrderedByHeight :many
+-- name: GetAllBlocksOrderedByHeight :many
 SELECT * FROM blocks ORDER BY height ASC;
 
 -- name: DeleteBlockByHeightAndHash :exec
 DELETE FROM blocks WHERE height = ? AND hash = ?;
+
+-- name: GetBlocksWithMinHeight :many
+SELECT * FROM blocks WHERE height >= ? ORDER BY height ASC;
