@@ -1,13 +1,15 @@
 -- name: CreateBlocksTableIfNotExists :exec
 CREATE TABLE IF NOT EXISTS blocks (
-    height INTEGER PRIMARY KEY,
-    hash TEXT NOT NULL UNIQUE,
+    height INTEGER NOT NULL,
+    hash TEXT NOT NULL,
     previous_hash TEXT NOT NULL,
     timestamp INTEGER NOT NULL,
     nonce INTEGER NOT NULL,
     difficulty INTEGER NOT NULL,
-    data TEXT NOT NULL
+    data TEXT NOT NULL,
+    UNIQUE (hash, height)
 );
+
 
 -- name: GetAllBlocks :many
 SELECT * FROM blocks ORDER BY height DESC;
@@ -19,12 +21,12 @@ SELECT * FROM blocks WHERE hash = ?;
 SELECT * FROM blocks WHERE height = ?;
 
 -- name: InsertBlock :exec
-INSERT INTO blocks (
-    height, 
-    hash, 
-    previous_hash, 
-    timestamp, 
-    nonce, 
+INSERT OR IGNORE INTO blocks (
+    height,
+    hash,
+    previous_hash,
+    timestamp,
+    nonce,
     difficulty,
     data
 ) VALUES (?, ?, ?, ?, ?, ?, ?);

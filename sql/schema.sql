@@ -5,5 +5,6 @@ CREATE TABLE IF NOT EXISTS blocks (
     timestamp INTEGER NOT NULL,
     nonce INTEGER NOT NULL,
     difficulty INTEGER NOT NULL,
-    data TEXT NOT NULL
+    data TEXT NOT NULL,
+    UNIQUE (hash, height)
 );

@@ -339,27 +339,21 @@ func (cb *CapyBlockchain) SyncBlockchain() {
 		//
 		dt := cb.Database.NewQueries()
 		ctx := context.Background()
-		for _, peerCapyBlock := range peerChain {
-			_, err := dt.GetBlockByHeight(ctx, peerCapyBlock.Height)
-			if err == nil {
-				// Já existe — não insere de novo
-				continue
-			}
-
-			err = dt.InsertBlock(ctx, db.InsertBlockParams{
-				Height:       peerCapyBlock.Height,
-				Hash:         peerCapyBlock.Hash,
-				PreviousHash: peerCapyBlock.PreviousHash,
-				Timestamp:    peerCapyBlock.Timestamp,
-				Nonce:        peerCapyBlock.Nonce,
-				Difficulty:   peerCapyBlock.Difficulty,
-				Data:         peerCapyBlock.Data,
-			})
-
+		for _, tmpBlck := range tempChain {
+			err = dt.InsertBlock(
+				ctx,
+				db.InsertBlockParams{
+					Height:       tmpBlck.Height,
+					Hash:         tmpBlck.Hash,
+					PreviousHash: tmpBlck.PreviousHash,
+					Timestamp:    tmpBlck.Timestamp,
+					Nonce:        tmpBlck.Nonce,
+					Difficulty:   tmpBlck.Difficulty,
+					Data:         tmpBlck.Data,
+				},
+			)
 			if err != nil {
-				dbg.Errorf("Error inserting block height %d from peer: %s",
-					peerCapyBlock.Height, err.Error())
-				continue
+				// Nothing to do, just continue
 			}
 		}
 
