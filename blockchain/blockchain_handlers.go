@@ -45,16 +45,17 @@ func SetupBlockchainHandlers(r *mux.Router) {
 		insertBlockHandler,
 	).Methods("POST")
 
+	// Endpoint para deletar um bloco específico
+	r.HandleFunc(
+		"/block",
+		deleteBlockHandler,
+	).Methods("DELETE")
+
 	// Endpoint para validar
 	r.HandleFunc(
 		"/validate",
 		validateHandler,
 	).Methods("GET")
-
-	r.HandleFunc(
-		"/block",
-		deleteBlockHandler,
-	).Methods("DELETE")
 }
 
 func chainGetHandler(w http.ResponseWriter, r *http.Request) {
@@ -63,27 +64,13 @@ func chainGetHandler(w http.ResponseWriter, r *http.Request) {
 	var allCapyBlocks []*CapyBlock
 	allCapyBlocks, err = CapyBlockchainInstance.GetAllCapyBlocks()
 	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to retrieve blockchain",
-			},
-		)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
 		dbg.Errorf("Error retrieving blockchain: %s", err.Error())
 		return
 	}
 	jsonAllCapyBlocks, err := json.Marshal(allCapyBlocks)
 	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to marshal blockchain",
-			},
-		)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
 		dbg.Errorf("Error marshaling blockchain: %s", err.Error())
 		return
 	}
@@ -100,14 +87,7 @@ func chainPostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = json.NewDecoder(r.Body).Decode(&requestData)
 	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Invalid request data",
-			},
-		)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
 		dbg.Errorf("Error decoding request data: %s", err.Error())
 		return
 	}
@@ -115,27 +95,13 @@ func chainPostHandler(w http.ResponseWriter, r *http.Request) {
 	var allCapyBlocks []CapyBlock
 	allCapyBlocks, err = CapyBlockchainInstance.GetCapyBlocksWithMinHeight(requestData.Height)
 	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to retrieve blockchain",
-			},
-		)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
 		dbg.Errorf("Error retrieving blockchain: %s", err.Error())
 		return
 	}
 	jsonAllCapyBlocks, err := json.Marshal(allCapyBlocks)
 	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to marshal blockchain",
-			},
-		)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
 		dbg.Errorf("Error marshaling blockchain: %s", err.Error())
 		return
 	}
@@ -152,14 +118,7 @@ func mineHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	err = json.NewDecoder(r.Body).Decode(&requestData)
 	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Invalid request data",
-			},
-		)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
 		dbg.Errorf("Error decoding request data: %s", err.Error())
 		return
 	}
@@ -176,14 +135,7 @@ func mineHandler(w http.ResponseWriter, r *http.Request) {
 
 	jsonMinedBlock, err := json.Marshal(minedBlock)
 	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to marshal mined block",
-			},
-		)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
 		dbg.Errorf("Error marshaling mined block: %s", err.Error())
 		return
 	}
@@ -191,7 +143,6 @@ func mineHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonMinedBlock)
-
 }
 
 func validateHandler(w http.ResponseWriter, r *http.Request) {
@@ -202,14 +153,10 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 	blocksLength := CapyBlockchainInstance.Length()
 
 	if blocksLength <= 0 {
-		jsonResp, _ := json.Marshal(
-			map[string]string{
-				"message": "Blockchain is empty",
-			},
-		)
+		dbg.Warnf("Blockchain is empty (considered valid)")
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonResp)
+		w.Write([]byte(`{"is_valid":true}`))
 		return
 	}
 
@@ -218,39 +165,20 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if inconsistentCapyBlock != nil {
-			jsonResp, _ := json.Marshal(
-				map[string]any{
-					"is_valid":           false,
-					"error":              err.Error(),
-					"inconsistent_block": inconsistentCapyBlock,
-				},
-			)
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(jsonResp)
-			dbg.Infof("Blockchain is invalid at block height %d", inconsistentCapyBlock.Height)
+			w.Write([]byte(`{"is_valid":false}`))
+			dbg.Warnf("Blockchain is invalid at block height %d", inconsistentCapyBlock.Height)
 		} else {
-			jsonResp, _ := json.Marshal(
-				map[string]any{
-					"is_valid": false,
-					"error":    err.Error(),
-				},
-			)
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
-			w.Write(jsonResp)
-			dbg.Infof("Blockchain is invalid")
+			w.Write([]byte(`{"is_valid":false}`))
+			dbg.Warnf("Blockchain is invalid")
 		}
 	} else {
-		jsonResp, _ := json.Marshal(
-			map[string]any{
-				"is_valid": true,
-				"message":  "Blockchain is valid",
-			},
-		)
 		w.WriteHeader(http.StatusOK)
 		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonResp)
+		w.Write([]byte(`{"is_valid":true}`))
 		dbg.Infof("Blockchain is valid")
 	}
 }
@@ -261,87 +189,19 @@ func insertBlockHandler(w http.ResponseWriter, r *http.Request) {
 	var capyBlock CapyBlock
 	err = json.NewDecoder(r.Body).Decode(&capyBlock)
 	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Invalid block data",
-			},
-		)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
 		dbg.Errorf("Error decoding block data: %s", err.Error())
 		return
 	}
 
 	err = CapyBlockchainInstance.AddBlockToDatabase(&capyBlock)
 	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to insert block",
-			},
-		)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
 		dbg.Errorf("Error inserting block: %s", err.Error())
 		return
 	}
 
-	jsonResp, _ := json.Marshal(
-		map[string]string{
-			"message": "Block added successfully",
-		},
-	)
 	w.WriteHeader(http.StatusCreated)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
-}
-
-func deleteBlockHandler(w http.ResponseWriter, r *http.Request) {
-	var err error
-
-	type RequestData struct {
-		Height int64  `json:"height"`
-		Hash   string `json:"hash"`
-	}
-
-	var requestData RequestData
-	err = json.NewDecoder(r.Body).Decode(&requestData)
-	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Invalid request data",
-			},
-		)
-		w.WriteHeader(http.StatusBadRequest)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
-		dbg.Errorf("Error decoding request data: %s", err.Error())
-		return
-	}
-
-	err = CapyBlockchainInstance.DeleteBlockByHeightAndHash(requestData.Height, requestData.Hash)
-	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to delete block",
-			},
-		)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
-		dbg.Errorf("Error deleting block: %s", err.Error())
-		return
-	}
-
-	jsonResp, _ := json.Marshal(
-		map[string]string{
-			"message": "Block deleted successfully",
-		},
-	)
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
 }
 
 func chainSyncGetHandler(w http.ResponseWriter, r *http.Request) {
@@ -360,14 +220,7 @@ func chainLengthHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	)
 	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to marshal blockchain length",
-			},
-		)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
 		dbg.Errorf("Error marshaling blockchain length: %s", err.Error())
 		return
 	}
@@ -375,4 +228,30 @@ func chainLengthHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResp)
+}
+
+func deleteBlockHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+
+	type RequestData struct {
+		Height int64  `json:"height"`
+		Hash   string `json:"hash"`
+	}
+
+	var requestData RequestData
+	err = json.NewDecoder(r.Body).Decode(&requestData)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		dbg.Errorf("Error decoding request data: %s", err.Error())
+		return
+	}
+
+	err = CapyBlockchainInstance.DeleteBlockByHeightAndHash(requestData.Height, requestData.Hash)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		dbg.Errorf("Error deleting block: %s", err.Error())
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

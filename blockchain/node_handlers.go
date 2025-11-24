@@ -1,6 +1,7 @@
 package blockchain
 
 import (
+	"capychain/dbg"
 	"encoding/json"
 	"net/http"
 
@@ -21,6 +22,12 @@ func SetupNodeHandlers(r *mux.Router) {
 		peersPostHandler,
 	).Methods("POST")
 
+	// Endpoint para remover um peer
+	r.HandleFunc(
+		"/peers",
+		peersDeleteHandler,
+	).Methods("DELETE")
+
 	// Endpoint para iniciar sincronização de peers
 	r.HandleFunc(
 		"/node/sync",
@@ -40,18 +47,13 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 	*/
 	jsonedNode, err := json.Marshal(CapyBlockchainInstance.Node)
 	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to marshal node information",
-			},
-		)
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
+
+	dbg.Infof("Providing node information")
 	w.WriteHeader(http.StatusOK)
+	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonedNode)
 }
 
@@ -61,30 +63,17 @@ func peersPostHandler(w http.ResponseWriter, r *http.Request) {
 	var newPeer CapyPeer
 	err = json.NewDecoder(r.Body).Decode(&newPeer)
 	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to decode peer information",
-			},
-		)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
 		return
 	}
 
+	dbg.Infof("Adding new peer [%s:%s]", newPeer.Address, newPeer.Port)
 	CapyBlockchainInstance.Node.AddCapyPeer(newPeer)
-
-	jsonedResp, _ := json.Marshal(
-		map[string]string{
-			"message": "Peer added successfully",
-		},
-	)
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonedResp)
 }
 
 func nodeSyncGetHandler(w http.ResponseWriter, r *http.Request) {
+	dbg.Infof("Starting node synchronization process")
 	CapyBlockchainInstance.Node.SyncNodePeers()
 	w.WriteHeader(http.StatusOK)
 }
@@ -95,25 +84,26 @@ func nodeSyncPostHandler(w http.ResponseWriter, r *http.Request) {
 	var passedCapyNodes []CapyNode
 	err = json.NewDecoder(r.Body).Decode(&passedCapyNodes)
 	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to decode array of addresses",
-			},
-		)
 		w.WriteHeader(http.StatusBadRequest)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
 		return
 	}
 
+	dbg.Infof("Synchronizing nodes")
 	CapyBlockchainInstance.Node.CastNodePeersSync(passedCapyNodes)
-
-	jsonedResp, _ := json.Marshal(
-		map[string]string{
-			"message": "Peer UIDs synchronized successfully",
-		},
-	)
-	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
-	w.Write(jsonedResp)
+}
+
+func peersDeleteHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+
+	var peerToRemove CapyPeer
+	err = json.NewDecoder(r.Body).Decode(&peerToRemove)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	dbg.Infof("Removing peer [%s:%s]", peerToRemove.Address, peerToRemove.Port)
+	CapyBlockchainInstance.Node.RemoveCapyPeer(peerToRemove)
+	w.WriteHeader(http.StatusOK)
 }

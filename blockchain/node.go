@@ -165,3 +165,14 @@ func (cp *CapyPeer) CastNodePeersSync(passedCapyNodes []CapyNode) {
 		return
 	}
 }
+
+func (cn *CapyNode) RemoveCapyPeer(peerToRemove CapyPeer) {
+	var updatedPeers []CapyPeer
+	for _, peer := range cn.Peers {
+		if peer.Address == peerToRemove.Address && peer.Port == peerToRemove.Port {
+			continue
+		}
+		updatedPeers = append(updatedPeers, peer)
+	}
+	cn.Peers = updatedPeers
+}
