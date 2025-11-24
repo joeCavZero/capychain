@@ -165,9 +165,18 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		if inconsistentCapyBlock != nil {
+			type InconsistentBlockResponse struct {
+				IsValid bool      `json:"is_valid"`
+				Block   CapyBlock `json:"inconsistent_block"`
+			}
+			response := InconsistentBlockResponse{
+				IsValid: false,
+				Block:   *inconsistentCapyBlock,
+			}
+			jsonResp, _ := json.Marshal(response)
 			w.WriteHeader(http.StatusOK)
 			w.Header().Set("Content-Type", "application/json")
-			w.Write([]byte(`{"is_valid":false}`))
+			w.Write(jsonResp)
 			dbg.Warnf("Blockchain is invalid at block height %d", inconsistentCapyBlock.Height)
 		} else {
 			w.WriteHeader(http.StatusOK)
