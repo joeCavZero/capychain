@@ -6,7 +6,6 @@ import (
 	"os"
 )
 
-const API_PORT string = "8080"
 const DATABASE_SOURCE string = "./capychain.sqlite3"
 
 func main() {
@@ -14,11 +13,15 @@ func main() {
 
 	var err error
 
-	var nodeName string = ""
+	var nodeName string = "capychain node"
+	var port string = "8080"
 	if len(os.Args) >= 2 {
 		nodeName = os.Args[1]
 	}
-	err = blockchain.Init(nodeName, API_PORT, DATABASE_SOURCE)
+	if len(os.Args) >= 3 {
+		port = os.Args[2]
+	}
+	err = blockchain.Init(nodeName, port, DATABASE_SOURCE)
 	if err != nil {
 		dbg.ExitWithErrorf("Failed to start API server: %s", err.Error())
 	}

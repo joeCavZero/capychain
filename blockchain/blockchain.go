@@ -282,7 +282,7 @@ func (cb *CapyBlockchain) GetAllCapyBlocks() ([]*CapyBlock, error) {
 	return capyBlocks, nil
 }
 
-func (cb *CapyBlockchain) SynchronizeBlockchain() error {
+func (cb *CapyBlockchain) SyncBlockchain() {
 	/*
 		Strategy implemented:
 		- Para cada peer:
@@ -365,8 +365,6 @@ func (cb *CapyBlockchain) SynchronizeBlockchain() error {
 
 		dbg.Infof("Successfully synchronized blockchain with peer [%s:%s]", peer.Address, peer.Port)
 	}
-
-	return nil
 }
 
 func (cb *CapyBlockchain) GetCapyBlocksWithMinHeight(minHeight int64) ([]CapyBlock, error) {
@@ -397,22 +395,6 @@ func (cb *CapyBlockchain) GetHighestBlock() (*CapyBlock, error) {
 	return capyBlock, nil
 }
 
-func (cb *CapyBlockchain) Synchronize(passedUIDs []uint64) error {
-	var err error
-
-	err = cb.SynchronizeBlockchain()
-	if err != nil {
-		return err
-	}
-
-	err = cb.Node.SynchronizePeers()
-	if err != nil {
-		return err
-	}
-
+func (cb *CapyBlockchain) Synchronize() error {
 	return nil
-}
-
-func (cb *CapyBlockchain) CastBlockchainSync(passedUIDs []uint64) {
-
 }

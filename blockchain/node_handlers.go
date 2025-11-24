@@ -15,12 +15,6 @@ func SetupNodeHandlers(r *mux.Router) {
 		nodeHandler,
 	).Methods("GET")
 
-	// Endpoint para listar peers conectados
-	r.HandleFunc(
-		"/peers",
-		peersGetHandler,
-	).Methods("GET")
-
 	// Endpoint para adicionar um novo peer
 	r.HandleFunc(
 		"/peers",
@@ -59,27 +53,6 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	w.Write(jsonedNode)
-}
-
-func peersGetHandler(w http.ResponseWriter, r *http.Request) {
-	var err error
-
-	var allPeers []CapyPeer = CapyBlockchainInstance.Node.ListPeers()
-	jsonedPeers, err := json.Marshal(allPeers)
-	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to marshal peers information",
-			},
-		)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	w.Write(jsonedPeers)
 }
 
 func peersPostHandler(w http.ResponseWriter, r *http.Request) {

@@ -33,11 +33,6 @@ func SetupBlockchainHandlers(r *mux.Router) {
 		chainSyncGetHandler,
 	).Methods("GET")
 
-	r.HandleFunc(
-		"/chain/sync",
-		chainSyncPostHandler,
-	).Methods("POST")
-
 	// Endpoint para iniciar o processo de mineração
 	r.HandleFunc(
 		"/mine",
@@ -350,28 +345,8 @@ func deleteBlockHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func chainSyncGetHandler(w http.ResponseWriter, r *http.Request) {
-	err := CapyBlockchainInstance.SynchronizeBlockchain()
-	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Failed to synchronize blockchain",
-			},
-		)
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
-		dbg.Errorf("Error synchronizing blockchain: %s", err.Error())
-		return
-	}
-
-	jsonResp, _ := json.Marshal(
-		map[string]string{
-			"message": "Blockchain synchronized successfully",
-		},
-	)
+	CapyBlockchainInstance.SyncBlockchain()
 	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
 }
 
 func chainLengthHandler(w http.ResponseWriter, r *http.Request) {
@@ -397,35 +372,6 @@ func chainLengthHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonResp)
-}
-
-func chainSyncPostHandler(w http.ResponseWriter, r *http.Request) {
-	var err error
-
-	var passedUIDs []uint64
-	err = json.NewDecoder(r.Body).Decode(&passedUIDs)
-	if err != nil {
-		jsonedErr, _ := json.Marshal(
-			map[string]string{
-				"error": "Invalid request data",
-			},
-		)
-		w.WriteHeader(http.StatusBadRequest)
-		w.Header().Set("Content-Type", "application/json")
-		w.Write(jsonedErr)
-		dbg.Errorf("Error decoding request data: %s", err.Error())
-		return
-	}
-
-	CapyBlockchainInstance.CastBlockchainSync(passedUIDs)
-	jsonResp, _ := json.Marshal(
-		map[string]string{
-			"message": "Blockchain synchronization casted successfully",
-		},
-	)
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
 	w.Write(jsonResp)
