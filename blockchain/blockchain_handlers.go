@@ -56,6 +56,12 @@ func SetupBlockchainHandlers(r *mux.Router) {
 		"/validate",
 		validateHandler,
 	).Methods("GET")
+
+	// Sync all
+	r.HandleFunc(
+		"/sync",
+		syncHandler,
+	).Methods("GET")
 }
 
 func chainGetHandler(w http.ResponseWriter, r *http.Request) {
@@ -262,5 +268,10 @@ func deleteBlockHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.WriteHeader(http.StatusOK)
+}
+
+func syncHandler(w http.ResponseWriter, r *http.Request) {
+	CapyBlockchainInstance.Sync()
 	w.WriteHeader(http.StatusOK)
 }

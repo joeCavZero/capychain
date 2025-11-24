@@ -395,6 +395,7 @@ func (cb *CapyBlockchain) GetHighestBlock() (*CapyBlock, error) {
 	return capyBlock, nil
 }
 
-func (cb *CapyBlockchain) Synchronize() error {
-	return nil
+func (cb *CapyBlockchain) Sync() {
+	cb.Node.SyncNodePeers()
+	cb.SyncBlockchain()
 }
