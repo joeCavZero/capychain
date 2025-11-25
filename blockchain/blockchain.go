@@ -10,6 +10,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/gorilla/mux"
 )
 
 var CapyBlockchainInstance *CapyBlockchain
@@ -17,21 +19,31 @@ var CapyBlockchainInstance *CapyBlockchain
 type CapyBlockchain struct {
 	Node     *CapyNode
 	Database *CapyDatabase
+	Router   *mux.Router
 }
 
 func NewCapyBlockchain(name string, port string, dbSource string) (*CapyBlockchain, error) {
 	var err error
 
+	// Setup do nó
 	capyNode := NewCapyNode(name, port)
 
+	// Setup do banco de dados
 	capyDatabase, err := NewCapyDatabase(dbSource)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize database: %s", err.Error())
 	}
 
+	// Setup do router
+	router := mux.NewRouter()
+	SetupInterfaceHandlers(router)
+	SetupBlockchainHandlers(router)
+	SetupNodeHandlers(router)
+
 	return &CapyBlockchain{
 		Node:     capyNode,
 		Database: capyDatabase,
+		Router:   router,
 	}, nil
 }
 
@@ -57,13 +69,28 @@ func Init(name string, port string, dbSource string) error {
 		dbg.Infof("Genesis block created successfully")
 	}
 
-	err = CapyBlockchainInstance.Node.StartServer()
+	err = CapyBlockchainInstance.StartServer()
 	if err != nil {
 		return fmt.Errorf("failed to start API server: %s", err.Error())
 	}
 
 	return nil
 
+}
+
+func (cb *CapyBlockchain) StartServer() error {
+	var err error
+
+	dbg.Infof("Starting node server on %s:%s", cb.Node.Address, cb.Node.Port)
+	err = http.ListenAndServe(
+		fmt.Sprintf(":%s", cb.Node.Port),
+		cb.Router,
+	)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func CalculateCapyBlockHash(block *CapyBlock) string {

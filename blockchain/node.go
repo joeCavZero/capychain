@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"net"
 	"net/http"
-
-	"github.com/gorilla/mux"
 )
 
 const (
@@ -17,11 +15,10 @@ const (
 )
 
 type CapyNode struct {
-	UID     uint64      `json:"uid"`
-	Name    string      `json:"name"`
-	Address string      `json:"address"`
-	Port    string      `json:"port"`
-	Router  *mux.Router `json:"-"`
+	UID     uint64 `json:"uid"`
+	Name    string `json:"name"`
+	Address string `json:"address"`
+	Port    string `json:"port"`
 
 	Peers      []CapyPeer `json:"peers"`
 	Vote       CapyPeer   `json:"vote"`
@@ -39,7 +36,6 @@ func NewCapyNode(name string, port string) *CapyNode {
 		Name:    name,
 		Address: localAddress,
 		Port:    port,
-		Router:  mux.NewRouter(),
 
 		Peers:      []CapyPeer{},
 		Vote:       votePeer,
@@ -63,25 +59,6 @@ func GetLocalAddress() (string, error) {
 	}
 
 	return "", fmt.Errorf("no non-loopback IP address found")
-}
-
-func (cn *CapyNode) StartServer() error {
-	var err error
-
-	SetupInterfaceHandlers(cn.Router)
-	SetupBlockchainHandlers(cn.Router)
-	SetupNodeHandlers(cn.Router)
-
-	dbg.Infof("Starting node server on %s:%s", cn.Address, cn.Port)
-	err = http.ListenAndServe(
-		fmt.Sprintf(":%s", cn.Port),
-		cn.Router,
-	)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (cn *CapyNode) AddCapyPeer(peer CapyPeer) {

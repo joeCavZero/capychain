@@ -18,14 +18,14 @@ func SetupNodeHandlers(r *mux.Router) {
 
 	// Endpoint para adicionar um novo peer
 	r.HandleFunc(
-		"/peers",
-		peersPostHandler,
+		"/node/peers",
+		nodePeersPostHandler,
 	).Methods("POST")
 
 	// Endpoint para remover um peer
 	r.HandleFunc(
-		"/peers",
-		peersDeleteHandler,
+		"/node/peers",
+		nodePeersDeleteHandler,
 	).Methods("DELETE")
 
 	// Endpoint para iniciar sincronização de peers
@@ -41,8 +41,13 @@ func SetupNodeHandlers(r *mux.Router) {
 	).Methods("POST")
 
 	r.HandleFunc(
-		"/vote",
-		voteHandler,
+		"/node/vote",
+		nodeVoteHandler,
+	).Methods("POST")
+
+	r.HandleFunc(
+		"/node/difficulty",
+		nodeDifficultyHandler,
 	).Methods("POST")
 }
 
@@ -62,7 +67,7 @@ func nodeHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonedNode)
 }
 
-func peersPostHandler(w http.ResponseWriter, r *http.Request) {
+func nodePeersPostHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	var newPeer CapyPeer
@@ -98,7 +103,7 @@ func nodeSyncPostHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func peersDeleteHandler(w http.ResponseWriter, r *http.Request) {
+func nodePeersDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	var peerToRemove CapyPeer
@@ -113,7 +118,7 @@ func peersDeleteHandler(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
-func voteHandler(w http.ResponseWriter, r *http.Request) {
+func nodeVoteHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	var peerVoteRequest CapyPeer
@@ -126,5 +131,23 @@ func voteHandler(w http.ResponseWriter, r *http.Request) {
 
 	dbg.Infof("Now this node vote for peer [%s:%s]", peerVoteRequest.Address, peerVoteRequest.Port)
 	CapyBlockchainInstance.Node.VoteForPeer(peerVoteRequest)
+	w.WriteHeader(http.StatusOK)
+}
+
+func nodeDifficultyHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+
+	var difficultyRequest struct {
+		Difficulty int `json:"difficulty"`
+	}
+	err = json.NewDecoder(r.Body).Decode(&difficultyRequest)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		dbg.Errorf("Error decoding difficulty request: %s", err.Error())
+		return
+	}
+
+	dbg.Infof("Setting node mining difficulty to %d", difficultyRequest.Difficulty)
+	CapyBlockchainInstance.Node.Difficulty = difficultyRequest.Difficulty
 	w.WriteHeader(http.StatusOK)
 }

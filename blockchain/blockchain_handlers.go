@@ -35,26 +35,26 @@ func SetupBlockchainHandlers(r *mux.Router) {
 
 	// Endpoint para iniciar o processo de mineração
 	r.HandleFunc(
-		"/mine",
-		mineHandler,
+		"/chain/mine",
+		chainMineHandler,
 	).Methods("POST")
 
 	// Endpoint para adicionar um novo bloco com dados fornecidos
 	r.HandleFunc(
-		"/block",
-		insertBlockHandler,
+		"/chain/block",
+		chainInsertBlockHandler,
 	).Methods("POST")
 
 	// Endpoint para deletar um bloco específico
 	r.HandleFunc(
-		"/block",
-		deleteBlockHandler,
+		"/chain/block",
+		chainDeleteBlockHandler,
 	).Methods("DELETE")
 
 	// Endpoint para validar
 	r.HandleFunc(
-		"/validate",
-		validateHandler,
+		"/chain/validate",
+		chainValidateHandler,
 	).Methods("GET")
 
 	// Sync all
@@ -116,7 +116,7 @@ func chainPostHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonAllCapyBlocks)
 }
 
-func mineHandler(w http.ResponseWriter, r *http.Request) {
+func chainMineHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	var requestData struct {
@@ -151,7 +151,7 @@ func mineHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonMinedBlock)
 }
 
-func validateHandler(w http.ResponseWriter, r *http.Request) {
+func chainValidateHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	dbg.Infof("Starting blockchain validation process")
@@ -198,7 +198,7 @@ func validateHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func insertBlockHandler(w http.ResponseWriter, r *http.Request) {
+func chainInsertBlockHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	var capyBlock CapyBlock
@@ -245,7 +245,7 @@ func chainLengthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(jsonResp)
 }
 
-func deleteBlockHandler(w http.ResponseWriter, r *http.Request) {
+func chainDeleteBlockHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
 	type RequestData struct {
