@@ -28,13 +28,12 @@ func interfaceHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("All Blocks:\n"))
 	for _, block := range allBlocks {
 		w.Write([]byte(
-			fmt.Sprintf("Height: %d, Hash: %s, Previous Hash: %s, Timestamp: %d, Nonce: %d, Difficulty: %d, Data: %s\n",
+			fmt.Sprintf("Height: %d, Hash: %s, Previous Hash: %s, Timestamp: %d, Nonce: %d, Data: %s\n",
 				block.Height,
 				block.Hash,
 				block.PreviousHash,
 				block.Timestamp,
 				block.Nonce,
-				block.Difficulty,
 				block.Data,
 			),
 		))

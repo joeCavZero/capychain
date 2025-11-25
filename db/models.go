@@ -10,6 +10,5 @@ type Block struct {
 	PreviousHash string
 	Timestamp    int64
 	Nonce        int64
-	Difficulty   int64
 	Data         string
 }

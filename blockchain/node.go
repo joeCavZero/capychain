@@ -23,21 +23,32 @@ type CapyNode struct {
 	Port    string      `json:"port"`
 	Router  *mux.Router `json:"-"`
 
-	Peers []CapyPeer `json:"peers"`
+	Peers      []CapyPeer `json:"peers"`
+	Vote       CapyPeer   `json:"vote"`
+	Difficulty int        `json:"difficulty"`
 }
 
 func NewCapyNode(name string, port string) *CapyNode {
+	localAddress, err := GetLocalAddress()
+	if err != nil {
+		localAddress = ""
+	}
+	votePeer := NewCapyPeer(localAddress, port)
 	return &CapyNode{
 		UID:     0,
 		Name:    name,
-		Address: "",
+		Address: localAddress,
 		Port:    port,
 		Router:  mux.NewRouter(),
-		Peers:   []CapyPeer{},
+
+		Peers:      []CapyPeer{},
+		Vote:       votePeer,
+		Difficulty: 1,
 	}
+
 }
 
-func GetLocalIP() (string, error) {
+func GetLocalAddress() (string, error) {
 	addresses, err := net.InterfaceAddrs()
 	if err != nil {
 		return "", err
@@ -60,11 +71,6 @@ func (cn *CapyNode) StartServer() error {
 	SetupInterfaceHandlers(cn.Router)
 	SetupBlockchainHandlers(cn.Router)
 	SetupNodeHandlers(cn.Router)
-
-	cn.Address, err = GetLocalIP()
-	if err != nil {
-		return fmt.Errorf("failed to get local IP address: %s", err.Error())
-	}
 
 	dbg.Infof("Starting node server on %s:%s", cn.Address, cn.Port)
 	err = http.ListenAndServe(
@@ -175,4 +181,92 @@ func (cn *CapyNode) RemoveCapyPeer(peerToRemove CapyPeer) {
 		updatedPeers = append(updatedPeers, peer)
 	}
 	cn.Peers = updatedPeers
+}
+
+func (cn *CapyNode) VoteForPeer(peerVote CapyPeer) {
+	cn.Vote = peerVote
+}
+
+func (cn *CapyNode) GetMostVotedNodeMiningDifficulty() int {
+	cn.SyncNodePeers()
+
+	var votes map[CapyPeer]uint64 = make(map[CapyPeer]uint64)
+
+	peers := cn.Peers
+	peers = append(
+		peers,
+		NewCapyPeer(cn.Address, cn.Port),
+	)
+	for _, peer := range peers {
+		dbg.Infof("Fetching vote from peer [%s:%s]", peer.Address, peer.Port)
+		peerNodeResp, err := http.Get(
+			fmt.Sprintf("http://%s:%s/node", peer.Address, peer.Port),
+		)
+		if err != nil {
+			dbg.Errorf("Error fetching node info from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
+			continue
+		}
+		if peerNodeResp.StatusCode != http.StatusOK {
+			dbg.Errorf("Non-OK HTTP status from peer [%s:%s]: %s", peer.Address, peer.Port, peerNodeResp.Status)
+			peerNodeResp.Body.Close()
+			continue
+		}
+
+		var peerNode CapyNode
+		err = json.NewDecoder(peerNodeResp.Body).Decode(&peerNode)
+		if err != nil {
+			dbg.Errorf("Error decoding node info from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
+			peerNodeResp.Body.Close()
+			continue
+		}
+		peerNodeResp.Body.Close()
+
+		v, ok := votes[peerNode.Vote]
+		if ok {
+			votes[peerNode.Vote] = v + 1
+		} else {
+			votes[peerNode.Vote] = 1
+		}
+	}
+
+	var selectedPeer CapyPeer
+	var maxVotes uint64 = 0
+	for p, v := range votes {
+		if v > maxVotes {
+			maxVotes = v
+			selectedPeer = p
+		}
+	}
+
+	// isso significa que ninguem votou em ninguem, logo, dificuldade padrao
+	if maxVotes == 0 {
+		return 1
+	}
+
+	dbg.Infof("Selected peer [%s:%s] with %d votes for mining difficulty", selectedPeer.Address, selectedPeer.Port, maxVotes)
+
+	peerNodeResp, err := http.Get(
+		fmt.Sprintf("http://%s:%s/node", selectedPeer.Address, selectedPeer.Port),
+	)
+
+	if err != nil {
+		dbg.Errorf("Error fetching node info from selected peer [%s:%s]: %s", selectedPeer.Address, selectedPeer.Port, err.Error())
+		return 1
+	}
+	if peerNodeResp.StatusCode != http.StatusOK {
+		dbg.Errorf("Non-OK HTTP status from selected peer [%s:%s]: %s", selectedPeer.Address, selectedPeer.Port, peerNodeResp.Status)
+		peerNodeResp.Body.Close()
+		return 1
+	}
+
+	var selectedPeerNode CapyNode
+	err = json.NewDecoder(peerNodeResp.Body).Decode(&selectedPeerNode)
+	if err != nil {
+		dbg.Errorf("Error decoding node info from selected peer [%s:%s]: %s", selectedPeer.Address, selectedPeer.Port, err.Error())
+		peerNodeResp.Body.Close()
+		return 1
+	}
+	peerNodeResp.Body.Close()
+
+	return selectedPeerNode.Difficulty
 }

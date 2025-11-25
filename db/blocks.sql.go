@@ -16,7 +16,6 @@ CREATE TABLE IF NOT EXISTS blocks (
     previous_hash TEXT NOT NULL,
     timestamp INTEGER NOT NULL,
     nonce INTEGER NOT NULL,
-    difficulty INTEGER NOT NULL,
     data TEXT NOT NULL,
     UNIQUE (hash, height)
 )
@@ -42,7 +41,7 @@ func (q *Queries) DeleteBlockByHeightAndHash(ctx context.Context, arg DeleteBloc
 }
 
 const getAllBlocks = `-- name: GetAllBlocks :many
-SELECT height, hash, previous_hash, timestamp, nonce, difficulty, data FROM blocks ORDER BY height DESC
+SELECT height, hash, previous_hash, timestamp, nonce, data FROM blocks ORDER BY height DESC
 `
 
 func (q *Queries) GetAllBlocks(ctx context.Context) ([]Block, error) {
@@ -60,7 +59,6 @@ func (q *Queries) GetAllBlocks(ctx context.Context) ([]Block, error) {
 			&i.PreviousHash,
 			&i.Timestamp,
 			&i.Nonce,
-			&i.Difficulty,
 			&i.Data,
 		); err != nil {
 			return nil, err
@@ -77,7 +75,7 @@ func (q *Queries) GetAllBlocks(ctx context.Context) ([]Block, error) {
 }
 
 const getAllBlocksOrderedByHeight = `-- name: GetAllBlocksOrderedByHeight :many
-SELECT height, hash, previous_hash, timestamp, nonce, difficulty, data FROM blocks ORDER BY height ASC
+SELECT height, hash, previous_hash, timestamp, nonce, data FROM blocks ORDER BY height ASC
 `
 
 func (q *Queries) GetAllBlocksOrderedByHeight(ctx context.Context) ([]Block, error) {
@@ -95,7 +93,6 @@ func (q *Queries) GetAllBlocksOrderedByHeight(ctx context.Context) ([]Block, err
 			&i.PreviousHash,
 			&i.Timestamp,
 			&i.Nonce,
-			&i.Difficulty,
 			&i.Data,
 		); err != nil {
 			return nil, err
@@ -112,7 +109,7 @@ func (q *Queries) GetAllBlocksOrderedByHeight(ctx context.Context) ([]Block, err
 }
 
 const getBlockByHash = `-- name: GetBlockByHash :one
-SELECT height, hash, previous_hash, timestamp, nonce, difficulty, data FROM blocks WHERE hash = ?
+SELECT height, hash, previous_hash, timestamp, nonce, data FROM blocks WHERE hash = ?
 `
 
 func (q *Queries) GetBlockByHash(ctx context.Context, hash string) (Block, error) {
@@ -124,14 +121,13 @@ func (q *Queries) GetBlockByHash(ctx context.Context, hash string) (Block, error
 		&i.PreviousHash,
 		&i.Timestamp,
 		&i.Nonce,
-		&i.Difficulty,
 		&i.Data,
 	)
 	return i, err
 }
 
 const getBlockByHeight = `-- name: GetBlockByHeight :one
-SELECT height, hash, previous_hash, timestamp, nonce, difficulty, data FROM blocks WHERE height = ?
+SELECT height, hash, previous_hash, timestamp, nonce, data FROM blocks WHERE height = ?
 `
 
 func (q *Queries) GetBlockByHeight(ctx context.Context, height int64) (Block, error) {
@@ -143,7 +139,6 @@ func (q *Queries) GetBlockByHeight(ctx context.Context, height int64) (Block, er
 		&i.PreviousHash,
 		&i.Timestamp,
 		&i.Nonce,
-		&i.Difficulty,
 		&i.Data,
 	)
 	return i, err
@@ -161,7 +156,7 @@ func (q *Queries) GetBlocksLength(ctx context.Context) (int64, error) {
 }
 
 const getBlocksWithMinHeight = `-- name: GetBlocksWithMinHeight :many
-SELECT height, hash, previous_hash, timestamp, nonce, difficulty, data FROM blocks WHERE height >= ? ORDER BY height ASC
+SELECT height, hash, previous_hash, timestamp, nonce, data FROM blocks WHERE height >= ? ORDER BY height ASC
 `
 
 func (q *Queries) GetBlocksWithMinHeight(ctx context.Context, height int64) ([]Block, error) {
@@ -179,7 +174,6 @@ func (q *Queries) GetBlocksWithMinHeight(ctx context.Context, height int64) ([]B
 			&i.PreviousHash,
 			&i.Timestamp,
 			&i.Nonce,
-			&i.Difficulty,
 			&i.Data,
 		); err != nil {
 			return nil, err
@@ -196,7 +190,7 @@ func (q *Queries) GetBlocksWithMinHeight(ctx context.Context, height int64) ([]B
 }
 
 const getHighestBlock = `-- name: GetHighestBlock :one
-SELECT height, hash, previous_hash, timestamp, nonce, difficulty, data FROM blocks ORDER BY height DESC LIMIT 1
+SELECT height, hash, previous_hash, timestamp, nonce, data FROM blocks ORDER BY height DESC LIMIT 1
 `
 
 func (q *Queries) GetHighestBlock(ctx context.Context) (Block, error) {
@@ -208,7 +202,6 @@ func (q *Queries) GetHighestBlock(ctx context.Context) (Block, error) {
 		&i.PreviousHash,
 		&i.Timestamp,
 		&i.Nonce,
-		&i.Difficulty,
 		&i.Data,
 	)
 	return i, err
@@ -221,9 +214,8 @@ INSERT OR IGNORE INTO blocks (
     previous_hash,
     timestamp,
     nonce,
-    difficulty,
     data
-) VALUES (?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?)
 `
 
 type InsertBlockParams struct {
@@ -232,7 +224,6 @@ type InsertBlockParams struct {
 	PreviousHash string
 	Timestamp    int64
 	Nonce        int64
-	Difficulty   int64
 	Data         string
 }
 
@@ -243,7 +234,6 @@ func (q *Queries) InsertBlock(ctx context.Context, arg InsertBlockParams) error 
 		arg.PreviousHash,
 		arg.Timestamp,
 		arg.Nonce,
-		arg.Difficulty,
 		arg.Data,
 	)
 	return err

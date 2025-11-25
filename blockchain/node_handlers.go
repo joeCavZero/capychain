@@ -39,6 +39,11 @@ func SetupNodeHandlers(r *mux.Router) {
 		"/node/sync",
 		nodeSyncPostHandler,
 	).Methods("POST")
+
+	r.HandleFunc(
+		"/vote",
+		voteHandler,
+	).Methods("POST")
 }
 
 func nodeHandler(w http.ResponseWriter, r *http.Request) {
@@ -105,5 +110,21 @@ func peersDeleteHandler(w http.ResponseWriter, r *http.Request) {
 
 	dbg.Infof("Removing peer [%s:%s]", peerToRemove.Address, peerToRemove.Port)
 	CapyBlockchainInstance.Node.RemoveCapyPeer(peerToRemove)
+	w.WriteHeader(http.StatusOK)
+}
+
+func voteHandler(w http.ResponseWriter, r *http.Request) {
+	var err error
+
+	var peerVoteRequest CapyPeer
+	err = json.NewDecoder(r.Body).Decode(&peerVoteRequest)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		dbg.Errorf("Error decoding vote request: %s", err.Error())
+		return
+	}
+
+	dbg.Infof("Now this node vote for peer [%s:%s]", peerVoteRequest.Address, peerVoteRequest.Port)
+	CapyBlockchainInstance.Node.VoteForPeer(peerVoteRequest)
 	w.WriteHeader(http.StatusOK)
 }

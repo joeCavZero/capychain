@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-const DATABASE_SOURCE string = "./capychain.sqlite3"
+const DatabaseSource string = "./capychain.sqlite3"
 
 func main() {
 	dbg.Infof("Initializing System")
@@ -21,7 +21,7 @@ func main() {
 	if len(os.Args) >= 3 {
 		port = os.Args[2]
 	}
-	err = blockchain.Init(nodeName, port, DATABASE_SOURCE)
+	err = blockchain.Init(nodeName, port, DatabaseSource)
 	if err != nil {
 		dbg.ExitWithErrorf("Failed to start API server: %s", err.Error())
 	}

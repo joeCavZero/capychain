@@ -5,11 +5,9 @@ CREATE TABLE IF NOT EXISTS blocks (
     previous_hash TEXT NOT NULL,
     timestamp INTEGER NOT NULL,
     nonce INTEGER NOT NULL,
-    difficulty INTEGER NOT NULL,
     data TEXT NOT NULL,
     UNIQUE (hash, height)
 );
-
 
 -- name: GetAllBlocks :many
 SELECT * FROM blocks ORDER BY height DESC;
@@ -27,9 +25,8 @@ INSERT OR IGNORE INTO blocks (
     previous_hash,
     timestamp,
     nonce,
-    difficulty,
     data
-) VALUES (?, ?, ?, ?, ?, ?, ?);
+) VALUES (?, ?, ?, ?, ?, ?);
 
 -- name: GetBlocksLength :one
 SELECT COUNT(*) as length FROM blocks;

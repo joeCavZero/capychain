@@ -15,9 +15,8 @@ import (
 var CapyBlockchainInstance *CapyBlockchain
 
 type CapyBlockchain struct {
-	Node       *CapyNode     `json:"node"`
-	Database   *CapyDatabase `json:"database"`
-	Difficulty int64         `json:"difficulty"`
+	Node     *CapyNode
+	Database *CapyDatabase
 }
 
 func NewCapyBlockchain(name string, port string, dbSource string) (*CapyBlockchain, error) {
@@ -31,9 +30,8 @@ func NewCapyBlockchain(name string, port string, dbSource string) (*CapyBlockcha
 	}
 
 	return &CapyBlockchain{
-		Node:       capyNode,
-		Database:   capyDatabase,
-		Difficulty: 0,
+		Node:     capyNode,
+		Database: capyDatabase,
 	}, nil
 }
 
@@ -51,7 +49,7 @@ func Init(name string, port string, dbSource string) error {
 
 	if CapyBlockchainInstance.Length() == 0 {
 		dbg.Infof("Creating genesis block")
-		genesisBlock := NewGenesisCapyBlock("Genesis Block", CapyBlockchainInstance.Difficulty)
+		genesisBlock := NewGenesisCapyBlock("Genesis Block", 0)
 		err = CapyBlockchainInstance.AddBlockToDatabase(genesisBlock)
 		if err != nil {
 			return fmt.Errorf("failed to create genesis block: %s", err.Error())
@@ -70,12 +68,11 @@ func Init(name string, port string, dbSource string) error {
 
 func CalculateCapyBlockHash(block *CapyBlock) string {
 	record := fmt.Sprintf(
-		"%d%s%d%d%d%s",
+		"%d%s%d%d%s",
 		block.Height,
 		block.PreviousHash,
 		block.Timestamp,
 		block.Nonce,
-		block.Difficulty,
 		block.Data,
 	)
 	h := sha256.New()
@@ -191,6 +188,8 @@ func (cb *CapyBlockchain) ValidateCapyBlocksBlockchain() (*CapyBlock, error) {
 }
 
 func (cb *CapyBlockchain) MineCapyBlock(data string, resChan chan CapyBlock) {
+	difficulty := cb.Node.GetMostVotedNodeMiningDifficulty()
+
 	highestBlock, err := cb.GetHighestBlock()
 	if err != nil {
 		dbg.Errorf("Error getting highest block: %s", err.Error())
@@ -202,14 +201,13 @@ func (cb *CapyBlockchain) MineCapyBlock(data string, resChan chan CapyBlock) {
 		highestBlock.Hash,
 		time.Now().Unix(),
 		0,
-		highestBlock.Difficulty,
 		data,
 	)
 
 	start := time.Now().Unix()
 	for {
 		newBlock.Hash = CalculateCapyBlockHash(newBlock)
-		target := strings.Repeat("0", int(newBlock.Difficulty))
+		target := strings.Repeat("0", difficulty)
 		if strings.HasPrefix(newBlock.Hash, target) {
 			elapsed := time.Now().Unix() - start
 			dbg.Infof("Block mined: %s in %d seconds", newBlock.Hash, elapsed)
@@ -244,7 +242,6 @@ func (cb *CapyBlockchain) AddBlockToDatabase(block *CapyBlock) error {
 			PreviousHash: block.PreviousHash,
 			Timestamp:    block.Timestamp,
 			Nonce:        block.Nonce,
-			Difficulty:   block.Difficulty,
 			Data:         block.Data,
 		},
 	)
@@ -348,7 +345,6 @@ func (cb *CapyBlockchain) SyncBlockchain() {
 					PreviousHash: tmpBlck.PreviousHash,
 					Timestamp:    tmpBlck.Timestamp,
 					Nonce:        tmpBlck.Nonce,
-					Difficulty:   tmpBlck.Difficulty,
 					Data:         tmpBlck.Data,
 				},
 			)

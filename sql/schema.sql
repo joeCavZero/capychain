@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS blocks (
     previous_hash TEXT NOT NULL,
     timestamp INTEGER NOT NULL,
     nonce INTEGER NOT NULL,
-    difficulty INTEGER NOT NULL,
     data TEXT NOT NULL,
     UNIQUE (hash, height)
 );
