@@ -126,7 +126,7 @@ func NewCapyPeer(address string, port string) CapyPeer {
 	}
 }
 
-// A função abaixo ajeita os UIDs dos nodes / peers da rede
+// A função abaixo ajeita os peers dos nodes/peers da rede
 func (cn *CapyNode) SyncNodePeers() {
 	var passedCapyNodes []CapyNode = []CapyNode{
 		*cn,

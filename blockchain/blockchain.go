@@ -237,7 +237,7 @@ func (cb *CapyBlockchain) MineCapyBlock(data string, resChan chan CapyBlock) {
 		target := strings.Repeat("0", difficulty)
 		if strings.HasPrefix(newBlock.Hash, target) {
 			elapsed := time.Now().Unix() - start
-			dbg.Infof("Block mined: %s in %d seconds", newBlock.Hash, elapsed)
+			dbg.Infof("Block mined: %s in %d seconds with difficulty %d", newBlock.Hash, elapsed, difficulty)
 			resChan <- *newBlock
 			return
 		}
@@ -323,27 +323,56 @@ func (cb *CapyBlockchain) SyncBlockchain() {
 	for _, peer := range cb.Node.Peers {
 		dbg.Infof("Synchronizing blockchain with peer [%s:%s]", peer.Address, peer.Port)
 
-		resp, err := http.Get(
+		// primeiro verifica pelo endpoint se ela é valida (evita transferir dados desnecessariamente)
+		respValid, err := http.Get(
+			fmt.Sprintf("http://%s:%s/chain/validate", peer.Address, peer.Port),
+		)
+		if err != nil {
+			dbg.Errorf("Error fetching validation from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
+			continue
+		}
+		if respValid.StatusCode != http.StatusOK {
+			dbg.Errorf("Non-OK HTTP status from peer [%s:%s]: %s", peer.Address, peer.Port, respValid.Status)
+			respValid.Body.Close()
+			continue
+		}
+		var validResp struct {
+			IsValid bool `json:"is_valid"`
+		}
+		err = json.NewDecoder(respValid.Body).Decode(&validResp)
+		if err != nil {
+			dbg.Errorf("Error decoding validation response from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
+			respValid.Body.Close()
+			continue
+		}
+		respValid.Body.Close()
+		if !validResp.IsValid {
+			dbg.Errorf("Peer [%s:%s] reported invalid blockchain", peer.Address, peer.Port)
+			continue
+		}
+
+		// agora pega toda a chain
+		respChain, err := http.Get(
 			fmt.Sprintf("http://%s:%s/chain", peer.Address, peer.Port),
 		)
 		if err != nil {
 			dbg.Errorf("Error fetching chain from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
 			continue
 		}
-		if resp.StatusCode != http.StatusOK {
-			dbg.Errorf("Non-OK HTTP status from peer [%s:%s]: %s", peer.Address, peer.Port, resp.Status)
-			resp.Body.Close()
+		if respChain.StatusCode != http.StatusOK {
+			dbg.Errorf("Non-OK HTTP status from peer [%s:%s]: %s", peer.Address, peer.Port, respChain.Status)
+			respChain.Body.Close()
 			continue
 		}
 
 		var peerChain []CapyBlock
-		err = json.NewDecoder(resp.Body).Decode(&peerChain)
+		err = json.NewDecoder(respChain.Body).Decode(&peerChain)
 		if err != nil {
 			dbg.Errorf("Error decoding chain from peer [%s:%s]: %s", peer.Address, peer.Port, err.Error())
-			resp.Body.Close()
+			respChain.Body.Close()
 			continue
 		}
-		resp.Body.Close()
+		respChain.Body.Close()
 
 		tempChain, err := cb.GetAllCapyBlocks()
 		if err != nil {
