@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"capychain/dbg"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -15,7 +16,6 @@ const (
 )
 
 type CapyNode struct {
-	UID     uint64 `json:"uid"`
 	Name    string `json:"name"`
 	Address string `json:"address"`
 	Port    string `json:"port"`
@@ -32,7 +32,6 @@ func NewCapyNode(name string, port string) *CapyNode {
 	}
 	votePeer := NewCapyPeer(localAddress, port)
 	return &CapyNode{
-		UID:     0,
 		Name:    name,
 		Address: localAddress,
 		Port:    port,
@@ -45,20 +44,61 @@ func NewCapyNode(name string, port string) *CapyNode {
 }
 
 func GetLocalAddress() (string, error) {
-	addresses, err := net.InterfaceAddrs()
+	ifaces, err := net.Interfaces()
 	if err != nil {
 		return "", err
 	}
 
-	for _, addr := range addresses {
-		if ipNet, ok := addr.(*net.IPNet); ok && !ipNet.IP.IsLoopback() {
-			if ipNet.IP.To4() != nil {
-				return ipNet.IP.String(), nil
+	for _, iface := range ifaces {
+		// Ignora interface desligada ou loopback
+		if iface.Flags&(net.FlagUp|net.FlagLoopback) != net.FlagUp {
+			continue
+		}
+
+		addrs, err := iface.Addrs()
+		if err != nil {
+			continue
+		}
+
+		for _, addr := range addrs {
+			var ip net.IP
+
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+
+			// Ignora IPv6 e loopback
+			if ip == nil || ip.IsLoopback() || ip.To4() == nil {
+				continue
+			}
+
+			// Verifica se está em faixas privadas
+			if isPrivateIP(ip) {
+				return ip.String(), nil
 			}
 		}
 	}
 
-	return "", fmt.Errorf("no non-loopback IP address found")
+	return "", errors.New("nenhum IP privado encontrado")
+}
+
+func isPrivateIP(ip net.IP) bool {
+	privateBlocks := []string{
+		"10.0.0.0/8",
+		"172.16.0.0/12",
+		"192.168.0.0/16",
+	}
+
+	for _, block := range privateBlocks {
+		_, cidr, _ := net.ParseCIDR(block)
+		if cidr.Contains(ip) {
+			return true
+		}
+	}
+	return false
 }
 
 func (cn *CapyNode) AddCapyPeer(peer CapyPeer) {
@@ -97,24 +137,10 @@ func (cn *CapyNode) SyncNodePeers() {
 	}
 }
 
-func GetNextUID(capyNodes []CapyNode) uint64 {
-	var maxUID uint64 = 0
-	for _, cpyNd := range capyNodes {
-		if cpyNd.UID > maxUID {
-			maxUID = cpyNd.UID
-		}
-	}
-	return maxUID + 1
-}
-
 func (cn *CapyNode) CastNodePeersSync(passedCapyNodes []CapyNode) {
 	for _, cpyNd := range passedCapyNodes {
 		if cpyNd.Address == cn.Address && cpyNd.Port == cn.Port {
 			return
-		}
-
-		if cpyNd.UID == cn.UID {
-			cn.UID = GetNextUID(passedCapyNodes)
 		}
 
 		newCapyPeer := NewCapyPeer(cpyNd.Address, cpyNd.Port)
