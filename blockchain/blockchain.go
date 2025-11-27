@@ -445,3 +445,21 @@ func (cb *CapyBlockchain) Sync() {
 	cb.Node.SyncNodePeers()
 	cb.SyncBlockchain()
 }
+
+func (cb *CapyBlockchain) GetCapyBlockByHeightAndHash(height int64, hash string) (*CapyBlock, error) {
+	var err error
+	dt := cb.Database.NewQueries()
+	ctx := context.Background()
+	dbBlock, err := dt.GetBlockByHeightAndHash(
+		ctx,
+		db.GetBlockByHeightAndHashParams{
+			Height: height,
+			Hash:   hash,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	capyBlock := NewCapyBlockFromDbBlock(dbBlock)
+	return capyBlock, nil
+}

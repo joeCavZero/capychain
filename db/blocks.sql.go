@@ -144,6 +144,29 @@ func (q *Queries) GetBlockByHeight(ctx context.Context, height int64) (Block, er
 	return i, err
 }
 
+const getBlockByHeightAndHash = `-- name: GetBlockByHeightAndHash :one
+SELECT height, hash, previous_hash, timestamp, nonce, data FROM blocks WHERE height = ? AND hash = ?
+`
+
+type GetBlockByHeightAndHashParams struct {
+	Height int64
+	Hash   string
+}
+
+func (q *Queries) GetBlockByHeightAndHash(ctx context.Context, arg GetBlockByHeightAndHashParams) (Block, error) {
+	row := q.db.QueryRowContext(ctx, getBlockByHeightAndHash, arg.Height, arg.Hash)
+	var i Block
+	err := row.Scan(
+		&i.Height,
+		&i.Hash,
+		&i.PreviousHash,
+		&i.Timestamp,
+		&i.Nonce,
+		&i.Data,
+	)
+	return i, err
+}
+
 const getBlocksLength = `-- name: GetBlocksLength :one
 SELECT COUNT(*) as length FROM blocks
 `

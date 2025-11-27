@@ -15,7 +15,7 @@ func SetupBlockchainHandlers(r *mux.Router) {
 		"/chain",
 		chainGetHandler,
 	).Methods("GET")
-	// ou a partir de uma altura mínima fornecida
+	// Endpoint para pegar um bloco pelo height e hash
 	r.HandleFunc(
 		"/chain",
 		chainPostHandler,
@@ -88,9 +88,12 @@ func chainGetHandler(w http.ResponseWriter, r *http.Request) {
 func chainPostHandler(w http.ResponseWriter, r *http.Request) {
 	var err error
 
-	var requestData struct {
-		Height int64 `json:"height"`
+	type blockInfoRequest struct {
+		Height int64  `json:"height"`
+		Hash   string `json:"hash"`
 	}
+
+	var requestData blockInfoRequest
 	err = json.NewDecoder(r.Body).Decode(&requestData)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -98,22 +101,24 @@ func chainPostHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var allCapyBlocks []CapyBlock
-	allCapyBlocks, err = CapyBlockchainInstance.GetCapyBlocksWithMinHeight(requestData.Height)
+	var capyBlock *CapyBlock
+	capyBlock, err = CapyBlockchainInstance.GetCapyBlockByHeightAndHash(requestData.Height, requestData.Hash)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		dbg.Errorf("Error retrieving blockchain: %s", err.Error())
+		dbg.Errorf("Error retrieving block: %s", err.Error())
 		return
 	}
-	jsonAllCapyBlocks, err := json.Marshal(allCapyBlocks)
+
+	jsonCapyBlock, err := json.Marshal(capyBlock)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		dbg.Errorf("Error marshaling blockchain: %s", err.Error())
+		dbg.Errorf("Error marshaling block: %s", err.Error())
 		return
 	}
+
 	w.WriteHeader(http.StatusOK)
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(jsonAllCapyBlocks)
+	w.Write(jsonCapyBlock)
 }
 
 func chainMineHandler(w http.ResponseWriter, r *http.Request) {

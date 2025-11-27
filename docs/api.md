@@ -1,215 +1,179 @@
 # CapyChain API Documentation
 
-**Version:** 0.1.0  
-**Base URL:** `http://{HOST}:{PORT}`
+This document provides an overview of the API endpoints available in the CapyChain blockchain application. The API allows interaction with the blockchain, including retrieving blocks, adding transactions, and managing nodes.
 
----
-
-## Quick Overview
-
-- **Format:** JSON for all data exchange endpoints.
-- **Default Header:** `Content-Type: application/json`
-- **Testing:** Use any HTTP client for requests.
-
----
-
-## Models (JSON Examples)
-
-### CapyPeer
+## Most Used Request and Response Models
+### CapyBlock
+Represents a block in the blockchain.
 ```json
 {
-    "address": "127.0.0.1",
-    "port": "8080"
+  "height": <integer>,
+  "hash": "<string>",
+  "previous_hash": "<string>",
+  "timestamp": "<string>",
+  "nonce": <integer>,
+  "data": "<string>"  
 }
 ```
 
 ### CapyNode
+Represents a node in the blockchain network.
 ```json
 {
-    "uid": 1,
-    "name": "node-name",
-    "address": "192.168.1.10",
-    "port": "8080",
-    "peers": [
-        { "address": "192.168.1.11", "port": "8081" }
-    ]
+    "name": "<string>",
+    "address": "<string>",
+    "port": "<string>",
+    "peers": [<CapyPeer>, ...],
+    "vote": <CapyPeer>,
+    "difficulty": <integer>
 }
 ```
 
-### CapyBlock
+### CapyPeer
+Represents a peer node in the blockchain network.
 ```json
 {
-    "height": 0,
-    "hash": "0000abcd...",
-    "previous_hash": "0",
-    "timestamp": 1610000000,
-    "nonce": 0,
-    "difficulty": 0,
-    "data": "Genesis Block"
+    "address": "<string>",
+    "port": "<string>"
 }
 ```
-
----
 
 ## Endpoints
-
-### **GET /node**
-- **Description:** Returns local node information.
-- **Response 200:** `CapyNode` (JSON)
-- **Example Request:**
-    - **Method:** GET
-    - **URL:** `/node`
-
-### **POST /peers**
-- **Description:** Adds a peer to the node.
-- **Example Request:**
-    - **Method:** POST
-    - **URL:** `/peers`
-    - **Body:**
+- `GET /interface`: Retrieve the API interface.
+    - Response: Web page
+- `GET /chain`: Retrieve the entire blockchain.
+    - Response: 
+        - Status 200: 
+            - Body: JSON array of `CapyBlock`
+        - Status 500: Internal server error
+- `POST /chain`: Get a block by its height and hash.
+    - Request Body:
       ```json
       {
-          "address": "192.168.1.11",
-          "port": "8081"
+        "height": <integer>,
+        "hash": "<block_hash>"
       }
       ```
-
-### **DELETE /peers**
-- **Description:** Removes a peer.
-- **Example Request:**
-    - **Method:** DELETE
-    - **URL:** `/peers`
-    - **Body:**
+    - Response: 
+        - Status 200:
+            - Body: `CapyBlock`
+        - Status 400: Bad request (invalid input)
+        - Status 500: Internal server error
+- `GET /chain/length`: Get the length of the blockchain.
+    - Response: 
+        - Status 200:
+            - Body:
+                ```json
+                {
+                    "length": <integer>
+                }
+                ```
+        - Status 500: Internal server error
+- `POST /chain/block`: Add a new block to the blockchain.
+    - Request Body: `CapyBlock`
+    - Response:
+        - Status 201: Block successfully created
+        - Status 400: Bad request (invalid block data)
+        - Status 500: Internal server error
+- `GET /chain/sync`: Synchronize the blockchain with other nodes.
+    - Response:
+        - Status 200: Synchronization successful
+- `POST /chain/mine`: Start the mining process for a new block.
+    - Request Body:
       ```json
       {
-          "address": "192.168.1.11",
-          "port": "8081"
+        "data": "<string>"
       }
       ```
-
-### **GET /node/sync**
-- **Description:** Starts peer synchronization from the local node.
-- **Example Request:**
-    - **Method:** GET
-    - **URL:** `/node/sync`
-
-### **POST /node/sync**
-- **Description:** Receives a list of `CapyNode` to propagate UID/peer synchronization.
-- **Body:** `[CapyNode]` (JSON)
-- **Example Request:**
-    - **Method:** POST
-    - **URL:** `/node/sync`
-    - **Body:**
+    - Response:
+        - Status 200:
+            - Body: `CapyBlock`
+        - Status 400: Bad request (invalid input)
+        - Status 500: Internal server error
+- `DELETE /chain/block`: Delete a specific block from the blockchain.
+    - Request Body:
+      ```json
+      {
+        "height": <integer>,
+        "hash": "<string>"
+      }
+      ```
+    - Response:
+        - Status 200: Block successfully deleted
+        - Status 400: Bad request (invalid input)
+        - Status 500: Internal server error
+- `GET /chain/validate`: Validate the blockchain.
+    - Response:
+        - Status 200:
+            - Body:
+                ```json
+                {
+                    "is_valid": <boolean>,
+                    "inconsistent_block": <CapyBlock> // Optional, only if invalid
+                }
+                ```
+        - Status 500: Internal server error
+- `GET /sync`: Synchronize all nodes.
+    - Response:
+        - Status 200: Synchronization successful
+- `GET /node`: Retrieve information about the current node.
+    - Response:
+        - Status 200:
+            - Body: `CapyNode`
+        - Status 500: Internal server error
+- `POST /node/peers`: Add a new peer to the node.
+    - Request Body:
+      ```json
+      {
+        "address": "<string>",
+        "port": "<string>"
+      }
+      ```
+    - Response:
+        - Status 200: Peer successfully added
+        - Status 400: Bad request (invalid input)
+- `DELETE /node/peers`: Remove a peer from the node.
+    - Request Body:
+      ```json
+      {
+        "address": "<string>",
+        "port": "<string>"
+      }
+      ```
+    - Response:
+        - Status 200: Peer successfully removed
+        - Status 400: Bad request (invalid input)
+- `GET /node/sync`: Start the synchronization process for the node.
+    - Response:
+        - Status 200: Synchronization successful
+- `POST /node/sync`: Synchronize the node with a list of other nodes.
+    - Request Body:
       ```json
       [
-          {
-              "uid": 1,
-              "name": "n",
-              "address": "192.168.1.10",
-              "port": "8080",
-              "peers": []
-          }
+        <CapyNode>, ...
       ]
       ```
-
-### **GET /chain**
-- **Description:** Returns the entire local blockchain.
-- **Response 200:** `[CapyBlock]`
-- **Example Request:**
-    - **Method:** GET
-    - **URL:** `/chain`
-
-### **POST /chain**
-- **Description:** Returns blocks starting from a minimum height.
-- **Body:** `{ "height": <int64> }`
-- **Response 200:** `[CapyBlock]`
-- **Example Request:**
-    - **Method:** POST
-    - **URL:** `/chain`
-    - **Body:**
+    - Response:
+        - Status 200: Synchronization successful
+        - Status 400: Bad request (invalid input)
+- `POST /node/vote`: Vote for a peer node.
+    - Request Body:
       ```json
       {
-          "height": 10
+        "address": "<string>",
+        "port": "<string>"
       }
       ```
-
-### **GET /chain/length**
-- **Description:** Returns the blockchain length.
-- **Response 200:** `{ "length": <int64> }`
-- **Example Request:**
-    - **Method:** GET
-    - **URL:** `/chain/length`
-
-### **GET /chain/sync**
-- **Description:** Starts blockchain synchronization with configured peers.
-- **Response 200:** No payload.
-- **Example Request:**
-    - **Method:** GET
-    - **URL:** `/chain/sync`
-
-### **POST /mine**
-- **Description:** Mines a block with the provided data, persists it, and returns the mined block.
-- **Body:** `{ "data": "<string>" }`
-- **Response 200:** `CapyBlock` (mined block)
-- **Example Request:**
-    - **Method:** POST
-    - **URL:** `/mine`
-    - **Body:**
+    - Response:
+        - Status 200: Vote successfully cast
+        - Status 400: Bad request (invalid input)
+- `POST /node/difficulty`: Set the mining difficulty for the node.
+    - Request Body:
       ```json
       {
-          "data": "Hello"
+        "difficulty": <integer>
       }
       ```
-
-### **POST /block**
-- **Description:** Inserts the provided block directly.
-- **Body:** `CapyBlock` (JSON)
-- **Response 201:** Confirmation message.
-- **Example Request:**
-    - **Method:** POST
-    - **URL:** `/block`
-    - **Body:**
-      ```json
-      {
-          "height": 1,
-          "hash": "...",
-          "previous_hash": "0",
-          "timestamp": 1610000000,
-          "nonce": 0,
-          "difficulty": 0,
-          "data": "..."
-      }
-      ```
-
-### **DELETE /block**
-- **Description:** Removes a block by height and hash.
-- **Body:** `{ "height": <int64>, "hash": "<string>" }`
-- **Response 200:** Confirmation message.
-- **Example Request:**
-    - **Method:** DELETE
-    - **URL:** `/block`
-    - **Body:**
-      ```json
-      {
-          "height": 1,
-          "hash": "..."
-      }
-      ```
-
-### **GET /validate**
-- **Description:** Validates the local blockchain.
-- **Response 200:**
-    - **Valid:** `{ "is_valid": true }`
-    - **Invalid:** `{ "is_valid": false, "inconsistent_block": {CapyBlock} }`
-- **Example Request:**
-    - **Method:** GET
-    - **URL:** `/validate`
-
-### **GET /interface**
-- **Description:** Simple interface that lists blocks (plain text).
-- **Response 200:** Formatted text.
-- **Example Request:**
-    - **Method:** GET
-    - **URL:** `/interface`
-
----
-
+    - Response:
+        - Status 200: Difficulty successfully updated
+        - Status 400: Bad request (invalid input)

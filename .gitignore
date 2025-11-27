@@ -1,1 +1,11 @@
+/build
+
 *.sqlite3
+*.sqlite
+*.db
+
+capychain
+*.exe
+*.app
+
+*.log

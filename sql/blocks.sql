@@ -42,3 +42,6 @@ SELECT * FROM blocks WHERE height >= ? ORDER BY height ASC;
 
 -- name: GetHighestBlock :one
 SELECT * FROM blocks ORDER BY height DESC LIMIT 1;
+
+-- name: GetBlockByHeightAndHash :one
+SELECT * FROM blocks WHERE height = ? AND hash = ?;
