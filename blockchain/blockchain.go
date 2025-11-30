@@ -36,6 +36,9 @@ func NewCapyBlockchain(name string, port string, dbSource string) (*CapyBlockcha
 
 	// Setup do router
 	router := mux.NewRouter()
+
+	router.Use(CORSMiddleware)
+
 	SetupInterfaceHandlers(router)
 	SetupBlockchainHandlers(router)
 	SetupNodeHandlers(router)

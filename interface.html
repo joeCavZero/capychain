@@ -1,0 +1,1699 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <title>CapyChain Interface </title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    :root {
+      --bg-color: #080808;
+      --bg-elevated: #141414;
+      --bg-card: #1b1b1b;
+      --bg-card-alt: #202020;
+      --accent: #ff9800;
+      --accent-soft: rgba(255, 152, 0, 0.14);
+      --accent-strong: #ffa726;
+      --text-main: #f5f5f5;
+      --text-muted: #bdbdbd;
+      --border-subtle: #333;
+      --error: #ef5350;
+      --success: #66bb6a;
+      --radius-lg: 16px;
+      --radius-md: 10px;
+      --shadow-soft: 0 14px 30px rgba(0, 0, 0, 0.5);
+      --transition-fast: 0.18s ease-out;
+      --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      --code-font: "JetBrains Mono", "Fira Code", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: var(--font-sans);
+      background: radial-gradient(circle at top, #1b1205 0, #050505 50%, #000 100%);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    @media (max-width: 900px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      .sidebar {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+      }
+    }
+
+    .sidebar {
+      border-right: 1px solid var(--border-subtle);
+      background: linear-gradient(180deg, #121212 0%, #050505 100%);
+      padding: 1.2rem 1.4rem 1.6rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.9rem;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 20% 20%, #ffe0b2, #ffb74d 35%, transparent 40%),
+        radial-gradient(circle at 80% 80%, #ffb300, #ff8f00 55%, transparent 62%),
+        radial-gradient(circle at 50% 20%, #5d4037, #3e2723 50%, transparent 55%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
+    }
+
+    .brand-text-title {
+      font-weight: 700;
+      letter-spacing: 0.03em;
+      display: flex;
+      align-items: baseline;
+      gap: 0.25rem;
+    }
+
+    .brand-text-sub {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      font-size: 0.7rem;
+      color: var(--accent-strong);
+      background: rgba(255, 152, 0, 0.08);
+      border: 1px solid rgba(255, 152, 0, 0.35);
+      margin-bottom: 1rem;
+    }
+
+    .tag-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px rgba(255, 152, 0, 0.7);
+    }
+
+    .nav-section-title {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-muted);
+      margin: 1rem 0 0.4rem;
+    }
+
+    .nav {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .nav button {
+      width: 100%;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0.5rem;
+      background: transparent;
+      padding: 0.45rem 0.65rem;
+      border-radius: 999px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      transition: var(--transition-fast);
+    }
+
+    .nav button span.icon {
+      font-size: 1.05rem;
+    }
+
+    .nav button:hover {
+      background: rgba(255, 152, 0, 0.1);
+      color: #ffe0b2;
+      transform: translateX(1px);
+    }
+
+    .nav button.active {
+      background: linear-gradient(90deg, rgba(255, 152, 0, 0.26), rgba(255, 152, 0, 0.05));
+      color: #fff3e0;
+      box-shadow: 0 0 0 1px rgba(255, 152, 0, 0.6);
+    }
+
+    .sidebar-footer {
+      margin-top: 1.6rem;
+      padding-top: 1rem;
+      border-top: 1px dashed #333;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .sidebar-footer code {
+      font-family: var(--code-font);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.12rem 0.3rem;
+      border-radius: 999px;
+      border: 1px solid #333;
+    }
+
+    /* MAIN AREA */
+    .main {
+      padding: 1.4rem 1.8rem 1.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 768px) {
+      .main {
+        padding: 1rem 1rem 1.4rem;
+      }
+    }
+
+    .main-header {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .main-header-title h1 {
+      font-size: 1.4rem;
+      font-weight: 600;
+    }
+
+    .main-header-title p {
+      font-size: 0.86rem;
+      color: var(--text-muted);
+    }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      font-size: 0.7rem;
+    }
+
+    .badge {
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid #333;
+      background: rgba(255, 255, 255, 0.02);
+      color: var(--text-muted);
+    }
+
+    .info-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      align-items: center;
+    }
+
+    .pill-highlight {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 999px;
+      background: rgba(255, 152, 0, 0.12);
+      border: 1px solid rgba(255, 152, 0, 0.5);
+      color: var(--accent-strong);
+      font-size: 0.75rem;
+    }
+
+    .pill-highlight .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-strong);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 2.1fr) minmax(0, 1.3fr);
+      gap: 1.1rem;
+    }
+
+    @media (max-width: 1024px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: radial-gradient(circle at top left, #20160a, #111111 36%, #090909 100%);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-soft);
+      padding: 1rem 1.1rem 1.1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: "";
+      position: absolute;
+      inset: -20%;
+      background: radial-gradient(circle at top right, rgba(255, 152, 0, 0.09), transparent 55%);
+      opacity: 0.7;
+      pointer-events: none;
+    }
+
+    .card-header {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.7rem;
+    }
+
+    .card-title {
+      font-size: 0.98rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+    }
+
+    .card-title span.icon {
+      font-size: 1.2rem;
+    }
+
+    .card-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .chip {
+      font-size: 0.75rem;
+      padding: 0.18rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 152, 0, 0.55);
+      background: rgba(255, 152, 0, 0.12);
+      color: var(--accent-strong);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+    }
+
+    .chip small {
+      font-size: 0.7rem;
+      opacity: 0.75;
+    }
+
+    .card-body {
+      position: relative;
+      font-size: 0.86rem;
+      color: var(--text-muted);
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .fields-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.5rem;
+    }
+
+    label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    input[type="text"],
+    input[type="number"],
+    textarea {
+      width: 100%;
+      padding: 0.4rem 0.55rem;
+      border-radius: var(--radius-md);
+      border: 1px solid #333;
+      background: #050505;
+      color: var(--text-main);
+      font-size: 0.85rem;
+      font-family: var(--code-font);
+      outline: none;
+      transition: var(--transition-fast);
+    }
+
+    input::placeholder,
+    textarea::placeholder {
+      color: #555;
+    }
+
+    input:focus,
+    textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 1px rgba(255, 152, 0, 0.4);
+    }
+
+    textarea {
+      min-height: 70px;
+      resize: vertical;
+    }
+
+    .actions-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 0.4rem;
+    }
+
+    button.btn {
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.8rem;
+      padding: 0.4rem 0.8rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+      transition: var(--transition-fast);
+      position: relative;
+      overflow: hidden;
+    }
+
+    button.btn-primary {
+      background: linear-gradient(120deg, var(--accent), #f57c00);
+      color: #111;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.7);
+    }
+
+    button.btn-primary::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, rgba(255, 255, 255, 0.15), transparent 60%);
+      opacity: 0;
+      transition: var(--transition-fast);
+    }
+
+    button.btn-primary:hover::after {
+      opacity: 1;
+    }
+
+    button.btn-secondary {
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--text-main);
+      border: 1px solid #333;
+    }
+
+    button.btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    button.btn-ghost {
+      background: transparent;
+      color: var(--text-muted);
+      border: 1px dashed #444;
+    }
+
+    button.btn-ghost:hover {
+      color: var(--accent-strong);
+      border-color: var(--accent);
+      background: rgba(255, 152, 0, 0.06);
+    }
+
+    button.btn:active {
+      transform: translateY(1px) scale(0.99);
+    }
+
+    .btn small {
+      font-size: 0.7rem;
+      opacity: 0.9;
+    }
+
+    .btn-icon {
+      font-size: 1rem;
+    }
+
+    .small-text {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .hint {
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      opacity: 0.9;
+    }
+
+    .divider {
+      margin: 0.4rem 0 0.6rem;
+      height: 1px;
+      border: none;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+    }
+
+    /* BLOCK LIST */
+    .block-list {
+      max-height: 360px;
+      overflow: auto;
+      padding-right: 0.25rem;
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    .block-card {
+      background: linear-gradient(135deg, rgba(255, 152, 0, 0.06), rgba(0, 0, 0, 0.8));
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255, 152, 0, 0.35);
+      padding: 0.6rem 0.65rem;
+      font-size: 0.78rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .block-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 0.3rem;
+    }
+
+    .block-tag {
+      font-size: 0.75rem;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.38);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: var(--accent-strong);
+    }
+
+    .block-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 0.4rem;
+      margin-bottom: 0.35rem;
+    }
+
+    .block-meta-item {
+      font-family: var(--code-font);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      background: rgba(0, 0, 0, 0.55);
+      padding: 0.16rem 0.35rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .block-hash {
+      font-family: var(--code-font);
+      font-size: 0.72rem;
+      word-break: break-all;
+      color: #ffe0b2;
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 8px;
+      padding: 0.25rem 0.35rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .block-data {
+      font-family: var(--code-font);
+      font-size: 0.72rem;
+      color: var(--text-main);
+      background: rgba(0, 0, 0, 0.7);
+      border-radius: 8px;
+      padding: 0.25rem 0.35rem;
+      max-height: 70px;
+      overflow: auto;
+      white-space: pre-wrap;
+    }
+
+    .block-footer {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 0.25rem;
+      gap: 0.3rem;
+    }
+
+    .chip-mini {
+      font-size: 0.7rem;
+      padding: 0.1rem 0.42rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      background: rgba(0, 0, 0, 0.6);
+      color: var(--text-muted);
+    }
+
+    /* RESPONSE CONSOLE */
+    .console-card {
+      background: radial-gradient(circle at top, rgba(255, 152, 0, 0.15), #080808 45%, #050505 100%);
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--border-subtle);
+      box-shadow: var(--shadow-soft);
+      padding: 0.9rem 1rem 1rem;
+      position: relative;
+      overflow: hidden;
+      margin-top: 0.4rem;
+    }
+
+    .console-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.6rem;
+      margin-bottom: 0.4rem;
+    }
+
+    .console-title {
+      font-size: 0.86rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .console-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      display: flex;
+      gap: 0.4rem;
+      align-items: center;
+    }
+
+    .status-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #616161;
+    }
+
+    .status-dot.ok {
+      background: var(--success);
+      box-shadow: 0 0 10px rgba(102, 187, 106, 0.9);
+    }
+
+    .status-dot.error {
+      background: var(--error);
+      box-shadow: 0 0 10px rgba(239, 83, 80, 0.9);
+    }
+
+    .console-body {
+      background: rgba(0, 0, 0, 0.85);
+      border-radius: 12px;
+      border: 1px solid #333;
+      padding: 0.55rem 0.7rem;
+      max-height: 260px;
+      overflow: auto;
+      font-family: var(--code-font);
+      font-size: 0.78rem;
+      color: #e0e0e0;
+      position: relative;
+    }
+
+    .console-body pre {
+      white-space: pre;
+    }
+
+    .console-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 0.35rem;
+      font-size: 0.74rem;
+      color: var(--text-muted);
+    }
+
+    .toast {
+      position: fixed;
+      right: 1.2rem;
+      bottom: 1.2rem;
+      padding: 0.55rem 0.85rem;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: rgba(0, 0, 0, 0.9);
+      border: 1px solid #333;
+      color: var(--text-main);
+      box-shadow: var(--shadow-soft);
+      opacity: 0;
+      transform: translateY(15px);
+      pointer-events: none;
+      transition: 0.25s ease-out;
+      z-index: 9999;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .toast.success {
+      border-color: rgba(102, 187, 106, 0.7);
+    }
+
+    .toast.error {
+      border-color: rgba(239, 83, 80, 0.8);
+    }
+
+    .toast .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .toast.success .dot {
+      background: var(--success);
+    }
+
+    .toast.error .dot {
+      background: var(--error);
+    }
+
+    .mono {
+      font-family: var(--code-font);
+    }
+
+    .nowrap {
+      white-space: nowrap;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true"></div>
+        <div>
+          <div class="brand-text-title">
+            <span>CapyChain</span>
+            <span style="font-size:0.85rem;color:#ffb74d;">Interface</span>
+          </div>
+          <div class="brand-text-sub">Dashboard de blocos para apresentação</div>
+        </div>
+      </div>
+
+      <div class="tag">
+        <span class="tag-dot"></span>
+        <span>Conectado a <code>http://%%ADDRESS%%:%%PORT%%</code></span>
+      </div>
+
+      <div>
+        <div class="nav-section-title">Fluxo da Blockchain</div>
+        <ul class="nav">
+          <li><button class="active" data-section="section-chain"><span class="icon">⛓️</span>Visão da cadeia</button>
+          </li>
+          <li><button data-section="section-mine"><span class="icon">⛏️</span>Mineração & blocos</button></li>
+          <li><button data-section="section-node"><span class="icon">🧩</span>Node & peers</button></li>
+        </ul>
+      </div>
+
+      <div>
+        <div class="nav-section-title">Sincronização</div>
+        <ul class="nav">
+          <li><button data-action="chain-sync"><span class="icon">📡</span>Sincronizar cadeia</button></li>
+          <li><button data-action="nodes-sync"><span class="icon">🌐</span>Sincronizar nós</button></li>
+        </ul>
+      </div>
+
+      <div class="sidebar-footer">
+        <div style="margin-top:0.2rem;">
+          <code>%%ADDRESS%%</code> → IP do node<br />
+          <code>%%PORT%%</code> → porta do processo<br />
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <header class="main-header">
+        <div class="main-header-title">
+          <h1>Interface visual do CapyChain</h1>
+          <p>Explore blocos, faça requisições à API e demonstre o funcionamento da sua blockchain de forma didática.</p>
+          <div class="badge-row">
+            <span class="badge">Tema escuro</span>
+            <span class="badge">Paleta laranja capivara</span>
+            <span class="badge">API em <code>localhost</code></span>
+          </div>
+        </div>
+        <div class="info-row">
+          <span class="pill-highlight">
+            <span class="dot"></span>
+            <span>GET / POST / DELETE em um só painel</span>
+          </span>
+        </div>
+      </header>
+
+      <!-- GRID -->
+      <section class="grid">
+
+        <!-- LEFT COLUMN: CHAIN / BLOCKS -->
+        <div id="section-chain" class="section">
+          <!-- Card: Chain overview -->
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <span class="icon">⛓️</span>
+                  <span>Visão geral da cadeia</span>
+                </div>
+                <div class="card-subtitle">Carregue a blockchain, veja o tamanho e valide a consistência.</div>
+              </div>
+              <div class="chip">
+                /chain
+                <small>GET • /chain/length • /chain/validate</small>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="actions-row">
+                <button id="btn-load-chain" class="btn btn-primary">
+                  <span class="btn-icon">📥</span>
+                  <span>Carregar cadeia</span>
+                </button>
+                <button id="btn-chain-length" class="btn btn-secondary">
+                  <span class="btn-icon">📏</span>
+                  <span>Comprimento</span>
+                </button>
+                <button id="btn-chain-validate" class="btn btn-secondary">
+                  <span class="btn-icon">✅</span>
+                  <span>Validar</span>
+                </button>
+              </div>
+              <hr class="divider" />
+              <div class="small-text">
+                Cada bloco retornado por <code>GET /chain</code> aparecerá como uma “caixinha” abaixo, com altura, hash,
+                nonce e dados.
+              </div>
+              <div id="chain-blocks" class="block-list" aria-label="Lista de blocos da blockchain"></div>
+            </div>
+          </article>
+
+          <!-- Card: Get block / Delete block -->
+          <article class="card" style="margin-top:0.9rem;">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <span class="icon">🔍</span>
+                  <span>Buscar / Excluir bloco</span>
+                </div>
+                <div class="card-subtitle">Utilize altura e hash para localizar ou remover um bloco específico.</div>
+              </div>
+              <div class="chip">POST /chain • DELETE /chain/block</div>
+            </div>
+            <div class="card-body">
+              <div class="field-group">
+                <div class="fields-row">
+                  <div>
+                    <label for="block-height-get">Altura (height)</label>
+                    <input type="number" id="block-height-get" placeholder="Ex.: 3" />
+                  </div>
+                  <div>
+                    <label for="block-hash-get">Hash</label>
+                    <input type="text" id="block-hash-get" placeholder="Hash do bloco" />
+                  </div>
+                </div>
+                <div class="actions-row">
+                  <button id="btn-get-block" class="btn btn-primary">
+                    <span class="btn-icon">📦</span>
+                    <span>Buscar bloco</span>
+                  </button>
+                  <button id="btn-delete-block" class="btn btn-ghost">
+                    <span class="btn-icon">🗑️</span>
+                    <span>Excluir bloco</span>
+                  </button>
+                  <span class="hint">Ambas as ações utilizam <code>height</code> + <code>hash</code> como
+                    identificador.</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <!-- RIGHT COLUMN: MINE / BLOCK CREATION / NODE -->
+        <div id="section-mine" class="section" style="display:none;">
+          <!-- Mining -->
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <span class="icon">⛏️</span>
+                  <span>Minerar novo bloco</span>
+                </div>
+                <div class="card-subtitle">Envie os dados e deixe o node construir um novo bloco.</div>
+              </div>
+              <div class="chip">POST /chain/mine</div>
+            </div>
+            <div class="card-body">
+              <div class="field-group">
+                <label for="mine-data">Dados do bloco (data)</label>
+                <textarea id="mine-data"
+                  placeholder="Ex.: { &quot;tipo&quot;: &quot;transação&quot;, &quot;valor&quot;: 42 }"></textarea>
+                <div class="actions-row">
+                  <button id="btn-mine-block" class="btn btn-primary">
+                    <span class="btn-icon">⚙️</span>
+                    <span>Iniciar mineração</span>
+                  </button>
+                  <span class="hint">Resposta será um <code>CapyBlock</code> completo, exibido no console e em
+                    caixinha.</span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Manual block creation -->
+          <article class="card" style="margin-top:0.9rem;">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <span class="icon">🧱</span>
+                  <span>Criar bloco manualmente</span>
+                </div>
+                <div class="card-subtitle">Monte um <code>CapyBlock</code> “na mão” para testes e envie à cadeia.</div>
+              </div>
+              <div class="chip">POST /chain/block</div>
+            </div>
+            <div class="card-body">
+              <div class="field-group">
+                <div class="fields-row">
+                  <div>
+                    <label for="block-height-add">Altura (height)</label>
+                    <input type="number" id="block-height-add" placeholder="Ex.: 4" />
+                  </div>
+                  <div>
+                    <label for="block-hash-add">Hash</label>
+                    <input type="text" id="block-hash-add" placeholder="Hash (se necessário)" />
+                  </div>
+                  <div>
+                    <label for="block-prevhash-add">Hash anterior</label>
+                    <input type="text" id="block-prevhash-add" placeholder="previous_hash" />
+                  </div>
+                </div>
+                <div class="fields-row" style="margin-top:0.3rem;">
+                  <div>
+                    <label for="block-timestamp-add">Timestamp</label>
+                    <input type="text" id="block-timestamp-add" placeholder="ISO 8601 ou outro formato" />
+                  </div>
+                  <div>
+                    <label for="block-nonce-add">Nonce</label>
+                    <input type="number" id="block-nonce-add" placeholder="Ex.: 12345" />
+                  </div>
+                </div>
+                <div style="margin-top:0.4rem;">
+                  <label for="block-data-add">Dados (data)</label>
+                  <textarea id="block-data-add"
+                    placeholder="Texto ou JSON com as informações que o bloco carrega"></textarea>
+                </div>
+                <div class="actions-row">
+                  <button id="btn-add-block" class="btn btn-primary">
+                    <span class="btn-icon">➕</span>
+                    <span>Enviar bloco</span>
+                  </button>
+                  <span class="hint">Certifique-se de respeitar as regras internas da sua implementação antes de
+                    adicionar.</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <!-- NODE SECTION (shares column with mining on small screens, but separate UI) -->
+        <div id="section-node" class="section" style="display:none;">
+          <!-- Node info -->
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <span class="icon">🧩</span>
+                  <span>Node atual</span>
+                </div>
+                <div class="card-subtitle">Veja informações do node, voto, dificuldade e peers.</div>
+              </div>
+              <div class="chip">GET /node</div>
+            </div>
+            <div class="card-body">
+              <div class="actions-row">
+                <button id="btn-node-info" class="btn btn-primary">
+                  <span class="btn-icon">ℹ️</span>
+                  <span>Carregar /node</span>
+                </button>
+                <span class="hint">Retorna um <code>CapyNode</code> com peers, voto e dificuldade.</span>
+              </div>
+            </div>
+          </article>
+
+          <!-- Peers / vote / difficulty -->
+          <article class="card" style="margin-top:0.9rem;">
+            <div class="card-header">
+              <div>
+                <div class="card-title">
+                  <span class="icon">👥</span>
+                  <span>Peers, voto e dificuldade</span>
+                </div>
+                <div class="card-subtitle">Gerencie peers, vote em um peer e altere a dificuldade de mineração.</div>
+              </div>
+              <div class="chip">/node/peers • /node/vote • /node/difficulty</div>
+            </div>
+            <div class="card-body">
+              <div class="field-group">
+                <div class="fields-row">
+                  <div>
+                    <label for="peer-address">Peer address</label>
+                    <input type="text" id="peer-address" placeholder="Ex.: 192.168.0.5" />
+                  </div>
+                  <div>
+                    <label for="peer-port">Peer port</label>
+                    <input type="text" id="peer-port" placeholder="Ex.: 8081" />
+                  </div>
+                </div>
+                <div class="actions-row">
+                  <button id="btn-add-peer" class="btn btn-secondary">
+                    <span class="btn-icon">➕</span>
+                    <span>Adicionar peer</span>
+                  </button>
+                  <button id="btn-remove-peer" class="btn btn-ghost">
+                    <span class="btn-icon">➖</span>
+                    <span>Remover peer</span>
+                  </button>
+                  <button id="btn-vote-peer" class="btn btn-secondary">
+                    <span class="btn-icon">🗳️</span>
+                    <span>Votar nesse peer</span>
+                  </button>
+                </div>
+                <span class="hint">Clique em um peer nas caixinhas abaixo para preencher automaticamente os campos de
+                  voto/remoção.</span>
+              </div>
+
+              <div class="field-group" style="margin-top:0.6rem;">
+                <label>Peers conhecidos</label>
+                <div id="peer-blocks" class="block-list" aria-label="Lista de peers"></div>
+              </div>
+
+              <hr class="divider" />
+
+              <div class="field-group">
+                <div class="fields-row">
+                  <div>
+                    <label for="node-difficulty">Dificuldade</label>
+                    <input type="number" id="node-difficulty" placeholder="Ex.: 4" />
+                  </div>
+                </div>
+                <div class="actions-row">
+                  <button id="btn-update-difficulty" class="btn btn-secondary">
+                    <span class="btn-icon">🎚️</span>
+                    <span>Atualizar dificuldade</span>
+                  </button>
+                  <span class="hint">Envia <code>{ "difficulty": &lt;integer&gt; }</code> para
+                    <code>POST /node/difficulty</code>.</span>
+                </div>
+              </div>
+
+              <hr class="divider" />
+
+              <div class="field-group">
+                <label>Voto do node</label>
+                <div id="vote-block" class="block-list" aria-label="Voto atual do node"
+                  style="max-height: 140px;"></div>
+              </div>
+
+              <hr class="divider" />
+
+              <div class="field-group">
+                <label for="nodes-sync-json">Sincronizar node com lista de nodes</label>
+                <textarea id="nodes-sync-json"
+                  placeholder='[{"name":"nodeA","address":"127.0.0.1","port":"8080","peers":[],"vote":null,"difficulty":3}]'></textarea>
+                <div class="actions-row">
+                  <button id="btn-node-sync-list" class="btn btn-secondary">
+                    <span class="btn-icon">🔁</span>
+                    <span>POST /node/sync</span>
+                  </button>
+                  <span class="hint">Cole aqui um array de <code>CapyNode</code> em JSON para sincronizar.</span>
+                </div>
+              </div>
+            </div>
+          </article>
+        </div>
+
+      </section>
+
+      <!-- CONSOLE -->
+      <section class="console-card" aria-label="Console de respostas da API">
+        <div class="console-card-header">
+          <div class="console-title">
+            <span>🖥️ Console de respostas</span>
+            <span id="console-endpoint" class="mono" style="font-size:0.78rem;color:#ffcc80;">aguardando
+              requisição...</span>
+          </div>
+          <div class="console-status">
+            <span id="console-status-dot" class="status-dot"></span>
+            <span id="console-status-text">Sem requisições ainda</span>
+          </div>
+        </div>
+        <div id="console-body" class="console-body">
+          <pre id="console-pre">// As respostas em JSON da API aparecerão aqui, bem formatadas.</pre>
+        </div>
+        <div class="console-footer">
+          <span class="small-text">
+            Última ação: <span id="console-last-action" class="mono">—</span>
+          </span>
+          <button id="btn-clear-console" class="btn btn-ghost">
+            <span class="btn-icon">🧹</span>
+            <span>Limpar console</span>
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast">
+    <span class="dot"></span>
+    <span id="toast-text"></span>
+  </div>
+
+  <script>
+    // =========================
+    // CONFIG
+    // =========================
+    const BASE_URL = 'http://%%ADDRESS%%:%%PORT%%';
+
+    // =========================
+    // UTILIDADES DE UI
+    // =========================
+    const $ = (id) => document.getElementById(id);
+
+    function showToast(message, type = 'success') {
+      const toast = $('toast');
+      const text = $('toast-text');
+      text.textContent = message;
+      toast.classList.remove('success', 'error');
+      toast.classList.add(type);
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 2600);
+    }
+
+    function updateConsole({ endpoint, status, ok, data, method }) {
+      const statusDot = $('console-status-dot');
+      const statusText = $('console-status-text');
+      const endpointLabel = $('console-endpoint');
+      const pre = $('console-pre');
+      const lastAction = $('console-last-action');
+
+      endpointLabel.textContent = `${method || ''} ${endpoint || ''}`.trim();
+      lastAction.textContent = new Date().toLocaleTimeString();
+
+      statusDot.classList.remove('ok', 'error');
+      if (typeof ok === 'boolean') {
+        statusDot.classList.add(ok ? 'ok' : 'error');
+        statusText.textContent = ok
+          ? `Status ${status} • Sucesso`
+          : `Status ${status} • Erro`;
+      } else {
+        statusText.textContent = 'Sem requisições ainda';
+      }
+
+      if (data !== undefined) {
+        try {
+          pre.textContent = typeof data === 'string'
+            ? data
+            : JSON.stringify(data, null, 2);
+        } catch (e) {
+          pre.textContent = String(data);
+        }
+      }
+    }
+
+    function clearConsole() {
+      updateConsole({
+        endpoint: '',
+        status: '',
+        ok: null,
+        data: '// Console limpo. Faça uma nova requisição para ver a resposta aqui.',
+        method: ''
+      });
+    }
+
+    function refreshNodeFromServer() {
+      const btn = $('btn-node-info');
+      if (btn) {
+        btn.click();
+      }
+    }
+
+    // =========================
+    // REQUEST GENÉRICO
+    // =========================
+    async function apiRequest(path, { method = 'GET', body = null } = {}) {
+      const url = BASE_URL + path;
+      const options = {
+        method,
+        headers: { 'Content-Type': 'application/json' }
+      };
+      if (body !== null && body !== undefined) {
+        options.body = JSON.stringify(body);
+      } else if (method === 'GET' || method === 'DELETE') {
+        delete options.body;
+      }
+
+      try {
+        const res = await fetch(url, options);
+        let data;
+        const text = await res.text();
+        try {
+          data = text ? JSON.parse(text) : null;
+        } catch {
+          data = text;
+        }
+
+        updateConsole({
+          endpoint: path,
+          status: res.status,
+          ok: res.ok,
+          data,
+          method
+        });
+
+        if (!res.ok) {
+          showToast(`Erro ${res.status} em ${method} ${path}`, 'error');
+        } else {
+          showToast(`OK (${res.status}) em ${method} ${path}`, 'success');
+        }
+
+        return { response: res, data };
+      } catch (err) {
+        console.error(err);
+        updateConsole({
+          endpoint: path,
+          status: 'N/A',
+          ok: false,
+          data: String(err),
+          method
+        });
+        showToast(`Falha de conexão com ${path}`, 'error');
+        return null;
+      }
+    }
+
+    // =========================
+    // RENDERIZAÇÃO DE BLOCOS
+    // =========================
+    function renderBlocks(blocks) {
+      const container = $('chain-blocks');
+      container.innerHTML = '';
+
+      if (!blocks) return;
+
+      const list = Array.isArray(blocks) ? blocks : [blocks];
+
+      if (list.length === 0) {
+        container.innerHTML = `<div class="small-text">Nenhum bloco encontrado.</div>`;
+        return;
+      }
+
+      list.forEach((block) => {
+        if (!block || typeof block !== 'object') return;
+
+        const card = document.createElement('div');
+        card.className = 'block-card';
+
+        const header = document.createElement('div');
+        header.className = 'block-card-header';
+
+        const left = document.createElement('div');
+        left.innerHTML = `
+      <strong>Bloco #${block.height ?? '?'}</strong>
+      <div class="small-text">timestamp: ${block.timestamp ?? '—'}</div>
+    `;
+
+        const right = document.createElement('div');
+        right.innerHTML = `<span class="block-tag">nonce: ${block.nonce ?? '—'}</span>`;
+
+        header.appendChild(left);
+        header.appendChild(right);
+
+        const meta = document.createElement('div');
+        meta.className = 'block-meta';
+        meta.innerHTML = `
+      <span class="block-meta-item">height: ${block.height ?? '—'}</span>
+      <span class="block-meta-item">hash anterior: ${(block.previous_hash || '').slice(0, 16)}...</span>
+    `;
+
+        const hash = document.createElement('div');
+        hash.className = 'block-hash';
+        hash.textContent = `hash: ${block.hash || '—'}`;
+
+        const data = document.createElement('div');
+        data.className = 'block-data';
+        data.textContent = block.data != null ? String(block.data) : '';
+
+        const footer = document.createElement('div');
+        footer.className = 'block-footer';
+        const chip = document.createElement('span');
+        chip.className = 'chip-mini';
+        chip.textContent = 'CapyBlock';
+        footer.appendChild(chip);
+
+        card.appendChild(header);
+        card.appendChild(meta);
+        card.appendChild(hash);
+        card.appendChild(data);
+        card.appendChild(footer);
+
+        // BÔNUS: clique preenche o formulário de excluir/buscar
+        card.addEventListener('click', () => {
+          if (block.height != null) $('block-height-get').value = block.height;
+          if (block.hash) $('block-hash-get').value = block.hash;
+          showToast(`Bloco #${block.height} selecionado para buscar/excluir`, 'success');
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    // =========================
+    // RENDERIZAÇÃO DE PEERS E VOTO
+    // =========================
+    function renderPeers(peers) {
+      const container = $('peer-blocks');
+      if (!container) return;
+
+      container.innerHTML = '';
+
+      if (!peers || !Array.isArray(peers) || peers.length === 0) {
+        container.innerHTML = `<div class="small-text">Nenhum peer carregado. Clique em "Carregar /node" para listar.</div>`;
+        return;
+      }
+
+      peers.forEach((peer, index) => {
+        if (!peer || typeof peer !== 'object') return;
+
+        const card = document.createElement('div');
+        card.className = 'block-card';
+
+        const header = document.createElement('div');
+        header.className = 'block-card-header';
+
+        const left = document.createElement('div');
+        const name = peer.name || `Peer #${index}`;
+        const address = peer.address || '—';
+        const port = peer.port || '—';
+
+        left.innerHTML = `
+      <strong>${name}</strong>
+      <div class="small-text">${address}:${port}</div>
+    `;
+
+        const right = document.createElement('div');
+        const votes = peer.votes ?? peer.vote_count ?? null;
+        right.innerHTML = `<span class="block-tag">${votes != null ? `votos: ${votes}` : 'peer'}</span>`;
+
+        header.appendChild(left);
+        header.appendChild(right);
+
+        const meta = document.createElement('div');
+        meta.className = 'block-meta';
+        meta.innerHTML = `
+      <span class="block-meta-item">address: ${address}</span>
+      <span class="block-meta-item">port: ${port}</span>
+    `;
+
+        const footer = document.createElement('div');
+        footer.className = 'block-footer';
+        const chip = document.createElement('span');
+        chip.className = 'chip-mini';
+        chip.textContent = 'Clique para votar/remover';
+        footer.appendChild(chip);
+
+        card.appendChild(header);
+        card.appendChild(meta);
+        card.appendChild(footer);
+
+        card.addEventListener('click', () => {
+          $('peer-address').value = address;
+          $('peer-port').value = port;
+          showToast(`Peer ${address}:${port} selecionado`, 'success');
+        });
+
+        container.appendChild(card);
+      });
+    }
+
+    function renderVote(vote) {
+      const container = $('vote-block');
+      if (!container) return;
+
+      container.innerHTML = '';
+
+      if (!vote) {
+        container.innerHTML = `<div class="small-text">Nenhum voto registrado para este node.</div>`;
+        return;
+      }
+
+      const card = document.createElement('div');
+      card.className = 'block-card';
+
+      const header = document.createElement('div');
+      header.className = 'block-card-header';
+
+      const targetName = vote.name || 'Peer votado';
+      const address = vote.address || (vote.peer && vote.peer.address) || '—';
+      const port = vote.port || (vote.peer && vote.peer.port) || '—';
+
+      const left = document.createElement('div');
+      left.innerHTML = `
+    <strong>Voto atual</strong>
+    <div class="small-text">${targetName}</div>
+  `;
+
+      const right = document.createElement('div');
+      right.innerHTML = `<span class="block-tag">destino do voto</span>`;
+
+      header.appendChild(left);
+      header.appendChild(right);
+
+      const meta = document.createElement('div');
+      meta.className = 'block-meta';
+      meta.innerHTML = `
+    <span class="block-meta-item">address: ${address}</span>
+    <span class="block-meta-item">port: ${port}</span>
+  `;
+
+      const footer = document.createElement('div');
+      footer.className = 'block-footer';
+      const chip = document.createElement('span');
+      chip.className = 'chip-mini';
+      chip.textContent = 'Voto do CapyNode';
+      footer.appendChild(chip);
+
+      card.appendChild(header);
+      card.appendChild(meta);
+      card.appendChild(footer);
+
+      container.appendChild(card);
+    }
+
+    // =========================
+    // EVENTOS DE NAVEGAÇÃO LATERAL
+    // =========================
+    function setupSidebarNavigation() {
+      const navButtons = document.querySelectorAll('.nav button[data-section]');
+      const sections = document.querySelectorAll('.section');
+
+      navButtons.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = btn.getAttribute('data-section');
+
+          navButtons.forEach((b) => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          sections.forEach((sec) => {
+            sec.style.display = sec.id === target ? '' : 'none';
+          });
+        });
+      });
+    }
+
+    // =========================
+    // EVENTOS DE AÇÃO RÁPIDA (SYNC)
+    // =========================
+    function setupQuickActions() {
+      document.querySelectorAll('.nav button[data-action]').forEach((btn) => {
+        const action = btn.getAttribute('data-action');
+        btn.addEventListener('click', async () => {
+          if (action === 'chain-sync') {
+            await apiRequest('/chain/sync', { method: 'GET' });
+          } else if (action === 'nodes-sync') {
+            await apiRequest('/node/sync', { method: 'GET' });
+          }
+        });
+      });
+    }
+
+    // =========================
+    // LIGAÇÃO DOS BOTÕES À API
+    // =========================
+    function setupApiBindings() {
+      // Console
+      $('btn-clear-console').addEventListener('click', clearConsole);
+
+      // CHAIN
+      $('btn-load-chain').addEventListener('click', async () => {
+        const result = await apiRequest('/chain', { method: 'GET' });
+        if (result && result.data) {
+          renderBlocks(result.data);
+        }
+      });
+
+      $('btn-chain-length').addEventListener('click', async () => {
+        await apiRequest('/chain/length', { method: 'GET' });
+      });
+
+      $('btn-chain-validate').addEventListener('click', async () => {
+        const result = await apiRequest('/chain/validate', { method: 'GET' });
+        if (result && result.data) {
+          const { is_valid, inconsistent_block } = result.data;
+          if (is_valid === false && inconsistent_block) {
+            // Render bloco inconsistente como caixinha
+            renderBlocks(inconsistent_block);
+          }
+        }
+      });
+
+      // GET BLOCK (POST /chain)
+      $('btn-get-block').addEventListener('click', async () => {
+        const height = Number($('block-height-get').value);
+        const hash = $('block-hash-get').value.trim();
+        if (!hash || Number.isNaN(height)) {
+          showToast('Informe height e hash para buscar o bloco.', 'error');
+          return;
+        }
+        const result = await apiRequest('/chain', {
+          method: 'POST',
+          body: { height, hash }
+        });
+        if (result && result.data) {
+          renderBlocks(result.data);
+        }
+      });
+
+      // DELETE BLOCK
+      $('btn-delete-block').addEventListener('click', async () => {
+        const height = Number($('block-height-get').value);
+        const hash = $('block-hash-get').value.trim();
+        if (!hash || Number.isNaN(height)) {
+          showToast('Informe height e hash para excluir o bloco.', 'error');
+          return;
+        }
+        await apiRequest('/chain/block', {
+          method: 'DELETE',
+          body: { height, hash }
+        });
+      });
+
+      // MINING
+      $('btn-mine-block').addEventListener('click', async () => {
+        const data = $('mine-data').value;
+        await apiRequest('/chain/mine', {
+          method: 'POST',
+          body: { data }
+        }).then((result) => {
+          if (result && result.data) {
+            renderBlocks(result.data);
+          }
+        });
+      });
+
+      // ADD BLOCK MANUAL
+      $('btn-add-block').addEventListener('click', async () => {
+        const height = $('block-height-add').value;
+        const hash = $('block-hash-add').value.trim();
+        const previous_hash = $('block-prevhash-add').value.trim();
+        const timestamp = $('block-timestamp-add').value.trim();
+        const nonce = $('block-nonce-add').value;
+        const data = $('block-data-add').value;
+
+        const body = {
+          height: height ? Number(height) : undefined,
+          hash: hash || undefined,
+          previous_hash: previous_hash || undefined,
+          timestamp: timestamp || undefined,
+          nonce: nonce ? Number(nonce) : undefined,
+          data: data || ''
+        };
+
+        await apiRequest('/chain/block', {
+          method: 'POST',
+          body
+        });
+      });
+
+      // NODE INFO
+      $('btn-node-info').addEventListener('click', async () => {
+        const result = await apiRequest('/node', { method: 'GET' });
+        if (result && result.data) {
+          const node = result.data;
+          renderPeers(node.peers);
+          renderVote(node.vote);
+          if (node.difficulty != null && !Number.isNaN(Number(node.difficulty))) {
+            $('node-difficulty').value = Number(node.difficulty);
+          }
+        }
+      });
+
+      // ADD PEER
+      $('btn-add-peer').addEventListener('click', async () => {
+        const address = $('peer-address').value.trim();
+        const port = $('peer-port').value.trim();
+        if (!address || !port) {
+          showToast('Informe address e port do peer.', 'error');
+          return;
+        }
+        const result = await apiRequest('/node/peers', {
+          method: 'POST',
+          body: { address, port }
+        });
+        if (result && result.response && result.response.ok) {
+          refreshNodeFromServer();
+        }
+      });
+
+      // REMOVE PEER
+      $('btn-remove-peer').addEventListener('click', async () => {
+        const address = $('peer-address').value.trim();
+        const port = $('peer-port').value.trim();
+        if (!address || !port) {
+          showToast('Informe address e port do peer.', 'error');
+          return;
+        }
+        const result = await apiRequest('/node/peers', {
+          method: 'DELETE',
+          body: { address, port }
+        });
+        if (result && result.response && result.response.ok) {
+          refreshNodeFromServer();
+        }
+      });
+
+      // VOTE PEER
+      $('btn-vote-peer').addEventListener('click', async () => {
+        const address = $('peer-address').value.trim();
+        const port = $('peer-port').value.trim();
+        if (!address || !port) {
+          showToast('Informe address e port para votar.', 'error');
+          return;
+        }
+        const result = await apiRequest('/node/vote', {
+          method: 'POST',
+          body: { address, port }
+        });
+        if (result && result.response && result.response.ok) {
+          refreshNodeFromServer();
+        }
+      });
+
+      // UPDATE DIFFICULTY
+      $('btn-update-difficulty').addEventListener('click', async () => {
+        const difficulty = Number($('node-difficulty').value);
+        if (Number.isNaN(difficulty)) {
+          showToast('Informe um valor numérico para dificuldade.', 'error');
+          return;
+        }
+        const result = await apiRequest('/node/difficulty', {
+          method: 'POST',
+          body: { difficulty }
+        });
+        if (result && result.response && result.response.ok) {
+          refreshNodeFromServer();
+        }
+      });
+
+      // NODE SYNC WITH LIST
+      $('btn-node-sync-list').addEventListener('click', async () => {
+        const raw = $('nodes-sync-json').value.trim();
+        if (!raw) {
+          showToast('Cole um array JSON de nodes para sincronizar.', 'error');
+          return;
+        }
+        try {
+          const parsed = JSON.parse(raw);
+          if (!Array.isArray(parsed)) {
+            showToast('O JSON deve ser um array de CapyNode.', 'error');
+            return;
+          }
+          const result = await apiRequest('/node/sync', {
+            method: 'POST',
+            body: parsed
+          });
+          if (result && result.response && result.response.ok) {
+            refreshNodeFromServer();
+          }
+        } catch (err) {
+          showToast('JSON inválido para /node/sync.', 'error');
+        }
+      });
+    }
+
+    // =========================
+    // INIT
+    // =========================
+    document.addEventListener('DOMContentLoaded', () => {
+      setupSidebarNavigation();
+      setupQuickActions();
+      setupApiBindings();
+      clearConsole();
+
+      // Estado inicial das caixinhas de peers e voto
+      const peerBlocks = $('peer-blocks');
+      if (peerBlocks) {
+        peerBlocks.innerHTML = `<div class="small-text">Nenhum peer carregado. Clique em "Carregar /node".</div>`;
+      }
+      const voteBlock = $('vote-block');
+      if (voteBlock) {
+        voteBlock.innerHTML = `<div class="small-text">Nenhum voto registrado para este node.</div>`;
+      }
+    });
+  </script>
+</body>
+
+</html>

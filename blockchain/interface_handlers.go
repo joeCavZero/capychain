@@ -4,6 +4,8 @@ import (
 	"capychain/dbg"
 	"fmt"
 	"net/http"
+	"os"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -16,26 +18,19 @@ func SetupInterfaceHandlers(r *mux.Router) {
 }
 
 func interfaceHandler(w http.ResponseWriter, r *http.Request) {
-	dt := CapyBlockchainInstance.Database.NewQueries()
-	ctx := r.Context()
-	allBlocks, err := dt.GetAllBlocks(ctx)
+	dbg.Infof("Serving interface page to %s", r.RemoteAddr)
+	rawSrc, err := os.ReadFile("interface.html")
 	if err != nil {
-		http.Error(w, "Failed to retrieve blocks", http.StatusInternalServerError)
-		dbg.Errorf("Error retrieving blocks: %s", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		fmt.Fprint(w, "Error loading interface")
 		return
 	}
 
-	w.Write([]byte("All Blocks:\n"))
-	for _, block := range allBlocks {
-		w.Write([]byte(
-			fmt.Sprintf("Height: %d, Hash: %s, Previous Hash: %s, Timestamp: %d, Nonce: %d, Data: %s\n",
-				block.Height,
-				block.Hash,
-				block.PreviousHash,
-				block.Timestamp,
-				block.Nonce,
-				block.Data,
-			),
-		))
-	}
+	src := string(rawSrc)
+	src = strings.ReplaceAll(src, "%%PORT%%", CapyBlockchainInstance.Node.Port)
+	src = strings.ReplaceAll(src, "%%ADDRESS%%", CapyBlockchainInstance.Node.Address)
+
+	w.Header().Set("Content-Type", "text/html")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprint(w, src)
 }
