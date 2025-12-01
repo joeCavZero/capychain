@@ -752,8 +752,24 @@
       <div>
         <div class="nav-section-title">Sincronização</div>
         <ul class="nav">
-          <li><button data-action="chain-sync"><span class="icon">📡</span>Sincronizar cadeia</button></li>
-          <li><button data-action="nodes-sync"><span class="icon">🌐</span>Sincronizar nós</button></li>
+          <li>
+            <button data-action="full-sync">
+              <span class="icon">🌐</span>
+              Sincronizar tudo
+            </button>
+          </li>
+          <li>
+            <button data-action="chain-sync">
+              <span class="icon">⛓️</span>
+              Sincronizar cadeia
+            </button>
+          </li>
+          <li>
+            <button data-action="node-sync">
+              <span class="icon">🧩</span>
+              Sincronizar node
+            </button>
+          </li>
         </ul>
       </div>
 
@@ -1460,11 +1476,17 @@
     function setupQuickActions() {
       document.querySelectorAll('.nav button[data-action]').forEach((btn) => {
         const action = btn.getAttribute('data-action');
+
         btn.addEventListener('click', async () => {
           if (action === 'chain-sync') {
+            // Sincroniza apenas a cadeia local com outros nodes
             await apiRequest('/chain/sync', { method: 'GET' });
-          } else if (action === 'nodes-sync') {
+          } else if (action === 'node-sync') {
+            // Sincroniza o node atual (informações de peers, voto etc.)
             await apiRequest('/node/sync', { method: 'GET' });
+          } else if (action === 'full-sync') {
+            // Sincronização global / consenso entre nodes
+            await apiRequest('/sync', { method: 'GET' });
           }
         });
       });
@@ -1648,7 +1670,7 @@
         }
       });
 
-      // NODE SYNC WITH LIST
+      // NODE SYNC WITH LIST (POST /node/sync)
       $('btn-node-sync-list').addEventListener('click', async () => {
         const raw = $('nodes-sync-json').value.trim();
         if (!raw) {
