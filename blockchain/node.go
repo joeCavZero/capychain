@@ -49,6 +49,8 @@ func GetLocalAddress() (string, error) {
 		return "", err
 	}
 
+	var ip192 string // guarda o IP 192 que encontrar
+
 	for _, iface := range ifaces {
 		// Ignora interface desligada ou loopback
 		if iface.Flags&(net.FlagUp|net.FlagLoopback) != net.FlagUp {
@@ -70,35 +72,37 @@ func GetLocalAddress() (string, error) {
 				ip = v.IP
 			}
 
-			// Ignora IPv6 e loopback
+			// Ignora IPv6, loopback e IPs que não são IPv4
 			if ip == nil || ip.IsLoopback() || ip.To4() == nil {
 				continue
 			}
 
-			// Verifica se está em faixas privadas
-			if isPrivateIP(ip) {
-				return ip.String(), nil
+			ipStr := ip.String()
+
+			// Se começa com 192.168, guarda e já pode retornar (prioridade máxima)
+			if len(ipStr) >= 7 && ipStr[:7] == "192.168" {
+				return ipStr, nil
+			}
+
+			// Se ainda não achou 192, mas é privado, guarda como fallback
+			if ip192 == "" && isPrivateIP(ip) {
+				ip192 = ipStr
 			}
 		}
+	}
+
+	if ip192 != "" {
+		return ip192, nil
 	}
 
 	return "", errors.New("nenhum IP privado encontrado")
 }
 
 func isPrivateIP(ip net.IP) bool {
-	privateBlocks := []string{
-		"10.0.0.0/8",
-		"172.16.0.0/12",
-		"192.168.0.0/16",
-	}
-
-	for _, block := range privateBlocks {
-		_, cidr, _ := net.ParseCIDR(block)
-		if cidr.Contains(ip) {
-			return true
-		}
-	}
-	return false
+	_, private24, _ := net.ParseCIDR("10.0.0.0/8")
+	_, private20, _ := net.ParseCIDR("172.16.0.0/12")
+	_, private16, _ := net.ParseCIDR("192.168.0.0/16")
+	return private24.Contains(ip) || private20.Contains(ip) || private16.Contains(ip)
 }
 
 func (cn *CapyNode) AddCapyPeer(peer CapyPeer) {
